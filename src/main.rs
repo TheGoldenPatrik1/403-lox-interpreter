@@ -3,6 +3,11 @@ use std::io;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
+use std::cell::Cell;
+
+thread_local! {
+    static HAD_ERROR: Cell<bool> = Cell::new(false);
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -55,8 +60,27 @@ fn run_prompt() {
             }
         }
     }
+    HAD_ERROR.with(|had_error| {
+        if had_error.get() {
+            std::process::exit(65);
+        }
+    });
 }
 
 fn run(source: &str) {
+    HAD_ERROR.with(|had_error| {
+        had_error.set(false);
+    });
     println!("Running source:\n{}", source);
+}
+
+fn error(line: u16, message: &str) {
+    report(line, "", message);
+}
+
+fn report(line: u16, location: &str, message: &str) {
+    eprintln!("[line {}] Error {}: {}", line, location, message);
+    HAD_ERROR.with(|had_error| {
+        had_error.set(true);
+    });
 }
