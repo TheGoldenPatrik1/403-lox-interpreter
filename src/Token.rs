@@ -1,16 +1,23 @@
-use std::fmt
+use crate::TokenType::TokenType;
+use std::fmt;
 
-struct Token {
-    type_: TokenType,
-    lexeme: String,
-    literal: Option<String>,
-    line: i32,
+#[derive(Debug, Clone)]
+pub struct Token {
+    pub type_: TokenType,
+    pub lexeme: String,
+    pub literal: Option<String>,
+    pub line: i32,
 }
 
 impl Token {
     // Constructor-like function
-    fn new(type_: TokenType, lexeme: String, literal: Option<String>, line: i32) -> Token {
-        Token { type_, lexeme, literal, line }
+    pub fn new(type_: TokenType, lexeme: String, literal: Option<String>, line: i32) -> Token {
+        Token {
+            type_,
+            lexeme,
+            literal,
+            line,
+        }
     }
 }
 
@@ -20,6 +27,6 @@ impl fmt::Display for Token {
             Some(lit) => lit.clone(),
             None => "None".to_string(),
         };
-        write!(f, "{} {} {}", self.type_, self.lexeme, literal)
+        write!(f, "{:?} {} {:?}", self.type_, self.lexeme, literal)
     }
 }
