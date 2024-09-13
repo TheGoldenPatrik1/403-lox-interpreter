@@ -5,14 +5,9 @@ use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
 
-mod Scanner;
-//use crate::Scanner;
-
-mod Token;
-//use crate::Token;
-
-mod TokenType;
-//use crate::TokenType;
+mod scanner;
+mod token;
+mod token_type;
 
 thread_local! {
     static HAD_ERROR: Cell<bool> = Cell::new(false);
@@ -80,9 +75,9 @@ fn run(source: &str) {
     HAD_ERROR.with(|had_error| {
         had_error.set(false);
     });
-    let source = "1 + 2".to_string();
-    let mut scanner = Scanner::Scanner::new(source); // Create a new Scanner
-    let tokens = scanner.scan_tokens(); // Scan tokens
+    let src = source.to_string();
+    let mut scan = scanner::Scanner::new(src); // Create a new Scanner
+    let tokens = scan.scan_tokens(); // Scan tokens
 
     // Print the tokens
     for token in tokens {
