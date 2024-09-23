@@ -1,42 +1,62 @@
+use crate::interpreter::Visitor;
 use crate::token::Token;
+use crate::value::Value;
 
 #[derive(Debug, Clone)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,
         operator: Token,
-        right: Box<Expr>
+        right: Box<Expr>,
     },
     Grouping {
-        expression: Box<Expr>
+        expression: Box<Expr>,
     },
     Literal {
-        value: Token
+        value: Token,
     },
     Unary {
         operator: Token,
-        right: Box<Expr>
-    }
+        right: Box<Expr>,
+    },
 }
 
 impl Expr {
     pub fn accept(&self) -> String {
         let mut return_value = String::new();
         match self {
-            Expr::Binary { left, operator, right } => {
+            Expr::Binary {
+                left,
+                operator,
+                right,
+            } => {
                 return_value = self.parenthesize(&operator.lexeme, vec![left, right]);
-            },
+            }
             Expr::Grouping { expression } => {
                 return_value = self.parenthesize("group", vec![expression]);
-            },
+            }
             Expr::Literal { value } => {
                 return_value = value.to_string();
-            },
+            }
             Expr::Unary { operator, right } => {
                 return_value = self.parenthesize(&operator.lexeme, vec![right]);
             }
         }
         return_value
+    }
+
+    pub fn accept_interp<V: Visitor>(&self, visitor: &V) -> Option<Value> {
+        let mut return_value = String::new();
+        match self {
+            Expr::Binary {
+                left,
+                operator,
+                right,
+            } => visitor.visit_binary_expr(self),
+            Expr::Grouping { expression } => visitor.visit_grouping_expr(self),
+            Expr::Literal { value } => visitor.visit_literal_expr(self),
+            Expr::Unary { operator, right } => visitor.visit_unary_expr(self),
+        }
     }
 
     fn parenthesize(&self, name: &str, exprs: Vec<&Box<Expr>>) -> String {

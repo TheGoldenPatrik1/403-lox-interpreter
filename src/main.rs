@@ -5,15 +5,21 @@ use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
 
+mod ast_printer;
 mod expr;
+mod interpreter;
 mod parser;
+mod runtime_error;
 mod scanner;
 mod token;
 mod token_type;
-mod ast_printer;
+mod value;
 
 thread_local! {
     static HAD_ERROR: Cell<bool> = Cell::new(false);
+}
+thread_local! {
+    static HAD_RUNTIME_ERROR: Cell<bool> = Cell::new(false);
 }
 
 fn main() {
@@ -42,6 +48,10 @@ fn run_file(file_path: &str) {
     if let Err(err) = file.read_to_string(&mut contents) {
         eprintln!("Error: Could not read from file '{}'. {}", file_path, err);
         std::process::exit(1);
+    }
+
+    if HAD_RUNTIME_ERROR.with(|had_error| had_error.get()) {
+        std::process::exit(75);
     }
 
     run(&contents);
@@ -78,7 +88,7 @@ fn run(source: &str) {
     HAD_ERROR.with(|had_error| {
         had_error.set(false);
     });
-    
+
     let src = source.to_string();
     let mut scan = scanner::Scanner::new(src); // Create a new Scanner
     let tokens = scan.scan_tokens(); // Scan tokens
@@ -89,12 +99,19 @@ fn run(source: &str) {
     if HAD_ERROR.with(|had_error| had_error.get()) {
         return;
     }
-
-    println!("{}", ast_printer::Printer::print(&expression));
+    let mut interp = interpreter::Interpreter::new();
+    interp.interpret(expression);
 }
 
 fn error(line: i32, message: &str) {
     report(line, "", message);
+}
+
+fn runtime_error(error: runtime_error::RuntimeError) {
+    eprintln!("{}\n[line {}]", error.message, error.token.line);
+    HAD_RUNTIME_ERROR.with(|had_error| {
+        had_error.set(true);
+    }); // Assuming `had_runtime_error` is a thread-local variable
 }
 
 fn error_token(token: &token::Token, message: &str) {
