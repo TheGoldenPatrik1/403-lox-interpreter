@@ -6,11 +6,13 @@ use std::io::{Read, Write};
 use std::path::Path;
 
 mod ast_printer;
+mod environment;
 mod expr;
 mod interpreter;
 mod parser;
 mod runtime_error;
 mod scanner;
+mod stmt;
 mod token;
 mod token_type;
 mod value;
@@ -94,13 +96,13 @@ fn run(source: &str) {
     let tokens = scan.scan_tokens(); // Scan tokens
 
     let mut parse = parser::Parser::new(tokens.clone()); // Create a new Parser
-    let expression = parse.parse(); // Parse the tokens
+    let statements: Vec<Option<stmt::Stmt>> = parse.parse(); // Parse the tokens
 
     if HAD_ERROR.with(|had_error| had_error.get()) {
         return;
     }
     let mut interp = interpreter::Interpreter::new();
-    interp.interpret(expression);
+    interp.interpret(statements);
 }
 
 fn error(line: i32, message: &str) {

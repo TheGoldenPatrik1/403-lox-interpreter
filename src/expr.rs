@@ -4,6 +4,10 @@ use crate::value::Value;
 
 #[derive(Debug, Clone)]
 pub enum Expr {
+    Assign {
+        name: Token,
+        value: Box<Expr>,
+    },
     Binary {
         left: Box<Expr>,
         operator: Token,
@@ -19,12 +23,18 @@ pub enum Expr {
         operator: Token,
         right: Box<Expr>,
     },
+    Variable {
+        name: Token,
+    },
 }
 
 impl Expr {
     pub fn accept(&self) -> String {
         let mut return_value = String::new();
         match self {
+            Expr::Assign { name, value } => {
+                return_value = self.parenthesize(&name.lexeme, vec![value])
+            }
             Expr::Binary {
                 left,
                 operator,
@@ -41,13 +51,17 @@ impl Expr {
             Expr::Unary { operator, right } => {
                 return_value = self.parenthesize(&operator.lexeme, vec![right]);
             }
+            Expr::Variable { name } => {
+                return_value = name.to_string();
+            }
         }
         return_value
     }
 
-    pub fn accept_interp<V: Visitor>(&self, visitor: &V) -> Option<Value> {
+    pub fn accept_interp<V: Visitor>(&self, visitor: &mut V) -> Option<Value> {
         let mut return_value = String::new();
         match self {
+            Expr::Assign { name, value } => visitor.visit_assign_expr(self),
             Expr::Binary {
                 left,
                 operator,
@@ -56,6 +70,7 @@ impl Expr {
             Expr::Grouping { expression } => visitor.visit_grouping_expr(self),
             Expr::Literal { value } => visitor.visit_literal_expr(self),
             Expr::Unary { operator, right } => visitor.visit_unary_expr(self),
+            Expr::Variable { name } => visitor.visit_variable_expr(self),
         }
     }
 

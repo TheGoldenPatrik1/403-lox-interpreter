@@ -1,27 +1,46 @@
+use crate::environment::Environment;
 use crate::expr::Expr;
 use crate::runtime_error::RuntimeError;
+use crate::stmt::Stmt;
 use crate::token::Token;
 use crate::token_type::TokenType;
 use crate::value::Value;
 
-// #[derive(PartialEq, PartialOrd, Debug)]
-// enum Value {
-//     Boolean(bool),
-//     Number(f64),
-//     String(String),
-// }
-
-pub struct Interpreter;
+pub struct Interpreter {
+    environment: Environment,
+}
 
 pub trait Visitor {
-    fn visit_literal_expr(&self, expr: &crate::expr::Expr) -> Option<Value>;
-    fn visit_grouping_expr(&self, expr: &crate::expr::Expr) -> Option<Value>;
-    fn visit_unary_expr(&self, expr: &crate::expr::Expr) -> Option<Value>;
-    fn visit_binary_expr(&self, expr: &crate::expr::Expr) -> Option<Value>;
+    fn visit_assign_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
+    fn visit_literal_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
+    fn visit_grouping_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
+    fn visit_unary_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
+    fn visit_binary_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
+    fn visit_variable_expr(&self, expr: &crate::expr::Expr) -> Option<Value>;
+}
+
+pub trait StmtVisitor {
+    fn visit_block_stmt(&mut self, stmts: Vec<Stmt>);
+    // fn visit_class_stmt(&self, stmt: &Class);
+    fn visit_expression_stmt(&mut self, expr: Expr);
+    // fn visit_function_stmt(&self, stmt: &Function);
+    // fn visit_if_stmt(&self, stmt: &IfStmt);
+    fn visit_print_stmt(&mut self, expr: Expr);
+    // fn visit_return_stmt(&self, stmt: &ReturnStmt);
+    fn visit_var_stmt(&mut self, name: Token, initializer: Option<Expr>);
+    // fn visit_while_stmt(&self, stmt: &WhileStmt);
 }
 
 impl Visitor for Interpreter {
-    fn visit_literal_expr(&self, expr: &crate::expr::Expr) -> Option<Value> {
+    fn visit_assign_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value> {
+        if let Expr::Assign { name, value } = expr {
+            let v = self.evaluate(&value);
+            self.environment.assign(name.clone(), v.clone());
+            return v;
+        }
+        None
+    }
+    fn visit_literal_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value> {
         if let crate::expr::Expr::Literal { value } = expr {
             match value.lexeme.parse::<f64>() {
                 Ok(num) => Some(Value::Number(num)),
@@ -32,17 +51,17 @@ impl Visitor for Interpreter {
         }
     }
 
-    fn visit_grouping_expr(&self, expr: &crate::expr::Expr) -> Option<Value> {
+    fn visit_grouping_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value> {
         if let crate::expr::Expr::Grouping { expression } = expr {
-            self.evaluate(*expression.clone()) // Assuming evaluate returns a String
+            self.evaluate(&expression.clone()) // Assuming evaluate returns a String
         } else {
             panic!("Expected a Grouping expression.");
         }
     }
 
-    fn visit_unary_expr(&self, expr: &Expr) -> Option<Value> {
+    fn visit_unary_expr(&mut self, expr: &Expr) -> Option<Value> {
         if let Expr::Unary { operator, right } = expr {
-            let r = self.evaluate(*right.clone());
+            let r = self.evaluate(&right.clone());
 
             match operator.type_ {
                 TokenType::Minus => {
@@ -66,15 +85,15 @@ impl Visitor for Interpreter {
         }
     }
 
-    fn visit_binary_expr(&self, expr: &Expr) -> Option<Value> {
+    fn visit_binary_expr(&mut self, expr: &Expr) -> Option<Value> {
         if let Expr::Binary {
             operator,
             left,
             right,
         } = expr
         {
-            let r = self.evaluate(*right.clone());
-            let l = self.evaluate(*left.clone());
+            let r = self.evaluate(&right.clone());
+            let l = self.evaluate(&left.clone());
 
             match operator.type_ {
                 TokenType::Greater => {
@@ -120,7 +139,7 @@ impl Visitor for Interpreter {
                     Some(Value::Number(left_val * right_val))
                 }
                 TokenType::Plus => {
-                    match (self.evaluate(*left.clone()), self.evaluate(*right.clone())) {
+                    match (self.evaluate(&left.clone()), self.evaluate(&right.clone())) {
                         (Some(Value::Number(l)), Some(Value::Number(r))) => {
                             Some(Value::Number(l + r))
                         }
@@ -146,16 +165,82 @@ impl Visitor for Interpreter {
             None
         }
     }
+
+    fn visit_variable_expr(&self, expr: &Expr) -> Option<Value> {
+        if let Expr::Variable { name } = expr {
+            return Some(self.environment.get(name));
+        }
+        None
+    }
+}
+
+impl StmtVisitor for Interpreter {
+    fn visit_block_stmt(&mut self, stmts: Vec<Stmt>) {
+        let mut new_environment = Environment::new(Some(Box::new(self.environment.clone())));
+        self.execute_block(&stmts, &mut new_environment);
+    }
+    // fn visit_class_stmt(&self, stmt: &Class) {}
+    // fn visit_function_stmt(&self, stmt: &Function) {}
+    // fn visit_if_stmt(&self, stmt: &IfStmt) {}
+    // fn visit_return_stmt(&self, stmt: &ReturnStmt) {}
+    fn visit_var_stmt(&mut self, name: Token, initializer: Option<Expr>) {
+        let mut value = None;
+        // Evaluate the initializer if it exists
+        if let Some(init) = initializer {
+            value = self.evaluate(&init);
+        }
+
+        // Define the variable in the environment
+        self.environment.define(name.lexeme.clone(), value);
+    }
+
+    // fn visit_while_stmt(&self, stmt: &WhileStmt) {}
+    fn visit_expression_stmt(&mut self, expr: Expr) {
+        self.evaluate(&expr); // Assuming evaluate returns Option<Value>
+    }
+
+    fn visit_print_stmt(&mut self, expr: Expr) {
+        if let Some(value) = self.evaluate(&expr) {
+            println!("{}", self.stringify(Some(value))); // Assuming stringify exists
+        } else {
+            // Handle evaluation error if needed, for example:
+            eprintln!("Failed to evaluate expression.");
+        }
+    }
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        Interpreter
+        Interpreter {
+            environment: Environment::new(None),
+        }
     }
 
-    fn evaluate(&self, expr: Expr) -> Option<Value> {
-        let visitor = Interpreter;
-        expr.accept_interp(&visitor) // Call accept to recursively evaluate the expression
+    fn evaluate(&mut self, expr: &Expr) -> Option<Value> {
+        let visitor = Interpreter {
+            environment: Environment::new(None),
+        };
+        expr.accept_interp(self) // Call accept to recursively evaluate the expression
+    }
+
+    fn execute(&mut self, stmt: Option<Stmt>) {
+        let visitor = Interpreter {
+            environment: Environment::new(None),
+        };
+        stmt.expect("REASON").accept(self);
+    }
+
+    fn execute_block(&mut self, statements: &[Stmt], environment: &mut Environment) {
+        // Store the current environment
+        let previous = std::mem::replace(&mut self.environment, environment.clone());
+
+        // Execute statements in the new environment
+        for statement in statements {
+            self.execute(Some(statement.clone()));
+        }
+
+        // Restore the previous environment
+        self.environment = previous;
     }
 
     fn parse_string(&self, s: &str) -> Option<Value> {
@@ -222,11 +307,12 @@ impl Interpreter {
         crate::runtime_error(error); // Return None or handle type error appropriately
     }
 
-    pub fn interpret(&self, expression: Expr) {
-        if let Some(value) = self.evaluate(expression) {
-            println!("{}", self.stringify(Some(value))); // Print the stringified value
-        } else {
-            eprintln!("Error while printing.");
+    pub fn interpret(&mut self, statements: Vec<Option<Stmt>>) {
+        for statement in statements {
+            match self.execute(statement) {
+                () => (),
+                _ => return,
+            }
         }
     }
 
@@ -242,9 +328,8 @@ impl Interpreter {
                     return text;
                 }
                 Value::Boolean(b) => b.to_string(),
-                Value::Operator(o) => o.to_string(),
-                Value::String(s) => s.to_string(),
-                // Handle other cases as needed
+                // Value::Operator(o) => (o.to_string()),
+                Value::String(s) => s.to_string(), // Handle other cases as needed
             },
             None => "nil".to_string(),
         }
