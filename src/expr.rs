@@ -26,40 +26,35 @@ pub enum Expr {
     Variable {
         name: Token,
     },
+    Logical {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
+    },
 }
 
 impl Expr {
     pub fn accept(&self) -> String {
-        let mut return_value = String::new();
         match self {
-            Expr::Assign { name, value } => {
-                return_value = self.parenthesize(&name.lexeme, vec![value])
-            }
+            Expr::Assign { name, value } => self.parenthesize(&name.lexeme, vec![value]),
             Expr::Binary {
                 left,
                 operator,
                 right,
-            } => {
-                return_value = self.parenthesize(&operator.lexeme, vec![left, right]);
-            }
-            Expr::Grouping { expression } => {
-                return_value = self.parenthesize("group", vec![expression]);
-            }
-            Expr::Literal { value } => {
-                return_value = value.to_string();
-            }
-            Expr::Unary { operator, right } => {
-                return_value = self.parenthesize(&operator.lexeme, vec![right]);
-            }
-            Expr::Variable { name } => {
-                return_value = name.to_string();
-            }
+            } => self.parenthesize(&operator.lexeme, vec![left, right]),
+            Expr::Grouping { expression } => self.parenthesize("group", vec![expression]),
+            Expr::Literal { value } => value.to_string(),
+            Expr::Unary { operator, right } => self.parenthesize(&operator.lexeme, vec![right]),
+            Expr::Variable { name } => name.to_string(),
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => self.parenthesize(&operator.lexeme, vec![left, right]),
         }
-        return_value
     }
 
     pub fn accept_interp<V: Visitor>(&self, visitor: &mut V) -> Option<Value> {
-        let mut return_value = String::new();
         match self {
             Expr::Assign { name, value } => visitor.visit_assign_expr(self),
             Expr::Binary {
@@ -71,6 +66,11 @@ impl Expr {
             Expr::Literal { value } => visitor.visit_literal_expr(self),
             Expr::Unary { operator, right } => visitor.visit_unary_expr(self),
             Expr::Variable { name } => visitor.visit_variable_expr(self),
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => visitor.visit_logical_expr(self),
         }
     }
 

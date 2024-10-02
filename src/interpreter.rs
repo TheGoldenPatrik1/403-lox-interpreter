@@ -17,18 +17,19 @@ pub trait Visitor {
     fn visit_unary_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
     fn visit_binary_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
     fn visit_variable_expr(&self, expr: &crate::expr::Expr) -> Option<Value>;
+    fn visit_logical_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
 }
 
 pub trait StmtVisitor {
     fn visit_block_stmt(&mut self, stmts: Vec<Stmt>);
-    // fn visit_class_stmt(&self, stmt: &Class);
+    // fn visit_class_stmt(&mut self, stmt: &Class);
     fn visit_expression_stmt(&mut self, expr: Expr);
-    // fn visit_function_stmt(&self, stmt: &Function);
-    // fn visit_if_stmt(&self, stmt: &IfStmt);
+    // fn visit_function_stmt(&mut self, stmt: &Function);
+    fn visit_if_stmt(&mut self, condition: Expr, then_branch: Box<Stmt>, else_branch: Box<Option<Stmt>>);
     fn visit_print_stmt(&mut self, expr: Expr);
-    // fn visit_return_stmt(&self, stmt: &ReturnStmt);
+    // fn visit_return_stmt(&mut self, stmt: &ReturnStmt);
     fn visit_var_stmt(&mut self, name: Token, initializer: Option<Expr>);
-    // fn visit_while_stmt(&self, stmt: &WhileStmt);
+    fn visit_while_stmt(&mut self, condition: Expr, body: Box<Stmt>);
 }
 
 impl Visitor for Interpreter {
@@ -42,9 +43,15 @@ impl Visitor for Interpreter {
     }
     fn visit_literal_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value> {
         if let crate::expr::Expr::Literal { value } = expr {
-            match value.lexeme.parse::<f64>() {
-                Ok(num) => Some(Value::Number(num)),
-                Err(_) => Some(Value::String(value.to_string())),
+            match value.type_ {
+                TokenType::Number => {
+                    let num = value.lexeme.parse::<f64>().unwrap();
+                    Some(Value::Number(num))
+                }
+                TokenType::String => Some(Value::String(value.lexeme.clone())),
+                TokenType::True => Some(Value::Boolean(true)),
+                TokenType::False => Some(Value::Boolean(false)),
+                _ => None,
             }
         } else {
             panic!("Expected a Literal expression.");
@@ -172,6 +179,28 @@ impl Visitor for Interpreter {
         }
         None
     }
+
+    fn visit_logical_expr(&mut self, expr: &Expr) -> Option<Value> {
+        if let Expr::Logical {
+            left,
+            operator,
+            right,
+        } = expr
+        {
+            let l = self.evaluate(&left.clone());
+            if operator.type_ == TokenType::Or {
+                if Interpreter::is_truthy(l.as_ref()) {
+                    return l;
+                }
+            } else {
+                if !Interpreter::is_truthy(l.as_ref()) {
+                    return l;
+                }
+            }
+            return self.evaluate(&right.clone());
+        }
+        None
+    }
 }
 
 impl StmtVisitor for Interpreter {
@@ -179,10 +208,21 @@ impl StmtVisitor for Interpreter {
         let mut new_environment = Environment::new(Some(Box::new(self.environment.clone())));
         self.execute_block(&stmts, &mut new_environment);
     }
-    // fn visit_class_stmt(&self, stmt: &Class) {}
-    // fn visit_function_stmt(&self, stmt: &Function) {}
-    // fn visit_if_stmt(&self, stmt: &IfStmt) {}
-    // fn visit_return_stmt(&self, stmt: &ReturnStmt) {}
+
+    // fn visit_class_stmt(&mut self, stmt: &Class) {}
+
+    // fn visit_function_stmt(&mut self, stmt: &Function) {}
+
+    fn visit_if_stmt(&mut self, condition: Expr, then_branch: Box<Stmt>, else_branch: Box<Option<Stmt>>) {
+        if Interpreter::is_truthy(self.evaluate(&condition).as_ref()) {
+            self.execute(Some(*then_branch));
+        } else if let Some(else_branch) = *else_branch {
+            self.execute(Some(else_branch));
+        }
+    }
+
+    // fn visit_return_stmt(&mut self, stmt: &ReturnStmt) {}
+
     fn visit_var_stmt(&mut self, name: Token, initializer: Option<Expr>) {
         let mut value = None;
         // Evaluate the initializer if it exists
@@ -194,7 +234,12 @@ impl StmtVisitor for Interpreter {
         self.environment.define(name.lexeme.clone(), value);
     }
 
-    // fn visit_while_stmt(&self, stmt: &WhileStmt) {}
+    fn visit_while_stmt(&mut self, condition: Expr, body: Box<Stmt>) {
+        while Interpreter::is_truthy(self.evaluate(&condition).as_ref()) {
+            self.execute(Some(*body.clone()));
+        }
+    }
+
     fn visit_expression_stmt(&mut self, expr: Expr) {
         self.evaluate(&expr); // Assuming evaluate returns Option<Value>
     }
@@ -310,8 +355,7 @@ impl Interpreter {
     pub fn interpret(&mut self, statements: Vec<Option<Stmt>>) {
         for statement in statements {
             match self.execute(statement) {
-                () => (),
-                _ => return,
+                () => ()
             }
         }
     }

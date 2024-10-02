@@ -42,8 +42,17 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Option<Stmt> {
+        if self.match_tokens(vec![TokenType::For]) {
+            return Some(self.for_statement());
+        }
+        if self.match_tokens(vec![TokenType::If]) {
+            return Some(self.if_statement());
+        }
         if self.match_tokens(vec![TokenType::Print]) {
             return Some(self.print_statement());
+        }
+        if self.match_tokens(vec![TokenType::While]) {
+            return Some(self.while_statement());
         }
 
         if self.match_tokens(vec![TokenType::LeftBrace]) {
@@ -59,9 +68,83 @@ impl Parser {
         Stmt::Print(value)
     }
 
+    fn if_statement(&mut self) -> Stmt {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'if'.");
+        let condition = self.expression();
+        self.consume(TokenType::RightParen, "Expect ')' after if condition.");
+
+        let then_branch = self.statement();
+        let else_branch = if self.match_tokens(vec![TokenType::Else]) {
+            Some(self.statement())
+        } else {
+            None
+        };
+
+        Stmt::If {
+            condition: condition,
+            then_branch: Box::new(then_branch.expect("REASON")),
+            else_branch: Box::new(else_branch.expect("REASON")),
+        }
+    }
+
+    fn while_statement(&mut self) -> Stmt {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'while'.");
+        let condition = self.expression();
+        self.consume(TokenType::RightParen, "Expect ')' after condition.");
+        let body = self.statement();
+        Stmt::While {
+            condition: condition,
+            body: Box::new(body.expect("REASON")),
+        }
+    }
+
+    fn for_statement(&mut self) -> Stmt {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'for'.");
+
+        let initializer = if self.match_tokens(vec![TokenType::Semicolon]) {
+            None
+        } else if self.match_tokens(vec![TokenType::Var]) {
+            Some(self.var_declaration())
+        } else {
+            Some(self.expression_statement())
+        };
+
+        let condition = if !self.check(TokenType::Semicolon) {
+            Some(self.expression())
+        } else {
+            None
+        };
+        self.consume(TokenType::Semicolon, "Expect ';' after loop condition.");
+
+        let increment = if !self.check(TokenType::RightParen) {
+            Some(self.expression())
+        } else {
+            None
+        };
+        self.consume(TokenType::RightParen, "Expect ')' after for clauses.");
+
+        let mut body = self.statement().expect("REASON");
+
+        if let Some(increment) = increment {
+            body = Stmt::Block(vec![body, Stmt::Expression(increment)]);
+        }
+
+        body = Stmt::While {
+            condition: condition.unwrap_or(Expr::Literal {
+                value: Token::new(TokenType::True, "true".to_string(), None, 0),
+            }),
+            body: Box::new(body),
+        };
+
+        if let Some(initializer) = initializer {
+            body = Stmt::Block(vec![initializer, body]);
+        }
+
+        body
+    }
+
     fn var_declaration(&mut self) -> Stmt {
         let name = self.consume(TokenType::Identifier, "Expect variable name.");
-        // let mut hello = self.clone();
         // Determine the initializer separately
         let initializer = {
             // This creates a new scope for the mutable borrow
@@ -103,7 +186,7 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> Expr {
-        let mut expr = self.equality();
+        let expr = self.or();
 
         if self.match_tokens(vec![TokenType::Equal]) {
             let equals = self.previous().clone();
@@ -118,6 +201,38 @@ impl Parser {
             }
 
             panic!("Invalid assignment target.");
+        }
+
+        expr
+    }
+
+    fn or(&mut self) -> Expr {
+        let mut expr = self.and();
+
+        while self.match_tokens(vec![TokenType::Or]) {
+            let operator = self.previous().clone();
+            let right = self.and();
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+
+        expr
+    }
+
+    fn and(&mut self) -> Expr {
+        let mut expr = self.equality();
+
+        while self.match_tokens(vec![TokenType::And]) {
+            let operator = self.previous().clone();
+            let right = self.equality();
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
         }
 
         expr
