@@ -259,8 +259,7 @@ impl StmtVisitor for Interpreter {
 
     fn visit_function_stmt(&mut self, name: Token, params: Vec<Token>, body: Vec<Stmt>) -> Option<ReturnValue> {
         let function = Value::Callable(Box::new(LoxFunction::new(
-            Stmt::Function { name: name.clone(), params, body },
-            self.environment.clone(),
+            Stmt::Function { name: name.clone(), params, body }
         )));
         self.environment.define(name.lexeme.clone(), Some(function));
         None
