@@ -31,6 +31,11 @@ pub enum Expr {
         operator: Token,
         right: Box<Expr>,
     },
+    Call {
+        callee: Box<Expr>,
+        paren: Token,
+        arguments: Vec<Expr>,
+    },
 }
 
 impl Expr {
@@ -51,26 +56,38 @@ impl Expr {
                 operator,
                 right,
             } => self.parenthesize(&operator.lexeme, vec![left, right]),
+            Expr::Call {
+                callee: _,
+                paren,
+                arguments: _,
+            } => {
+                self.parenthesize(&paren.lexeme, vec![])
+            }
         }
     }
 
     pub fn accept_interp<V: Visitor>(&self, visitor: &mut V) -> Option<Value> {
         match self {
-            Expr::Assign { name, value } => visitor.visit_assign_expr(self),
+            Expr::Assign { name: _, value: _ } => visitor.visit_assign_expr(self),
             Expr::Binary {
-                left,
-                operator,
-                right,
+                left: _,
+                operator: _,
+                right: _,
             } => visitor.visit_binary_expr(self),
-            Expr::Grouping { expression } => visitor.visit_grouping_expr(self),
-            Expr::Literal { value } => visitor.visit_literal_expr(self),
-            Expr::Unary { operator, right } => visitor.visit_unary_expr(self),
-            Expr::Variable { name } => visitor.visit_variable_expr(self),
+            Expr::Grouping { expression: _ } => visitor.visit_grouping_expr(self),
+            Expr::Literal { value: _ } => visitor.visit_literal_expr(self),
+            Expr::Unary { operator: _, right: _ } => visitor.visit_unary_expr(self),
+            Expr::Variable { name: _ } => visitor.visit_variable_expr(self),
             Expr::Logical {
-                left,
-                operator,
-                right,
+                left: _,
+                operator: _,
+                right: _,
             } => visitor.visit_logical_expr(self),
+            Expr::Call {
+                callee: _,
+                paren: _,
+                arguments: _,
+            } => visitor.visit_call_expr(self),
         }
     }
 

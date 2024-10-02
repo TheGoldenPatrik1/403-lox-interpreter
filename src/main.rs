@@ -16,6 +16,9 @@ mod stmt;
 mod token;
 mod token_type;
 mod value;
+mod callable;
+mod lox_function;
+mod return_value;
 
 thread_local! {
     static HAD_ERROR: Cell<bool> = Cell::new(false);

@@ -5,11 +5,13 @@ use crate::stmt::Stmt;
 use crate::token::Token;
 use crate::token_type::TokenType;
 use crate::value::Value;
+use crate::lox_function::LoxFunction;
+use crate::return_value::ReturnValue;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Interpreter {
-    environment: Environment,
+    pub environment: Environment,
 }
 
 pub trait Visitor {
@@ -18,20 +20,21 @@ pub trait Visitor {
     fn visit_grouping_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
     fn visit_unary_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
     fn visit_binary_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
+    fn visit_call_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
     fn visit_variable_expr(&self, expr: &crate::expr::Expr) -> Option<Value>;
     fn visit_logical_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
 }
 
 pub trait StmtVisitor {
-    fn visit_block_stmt(&mut self, stmts: Vec<Stmt>);
-    // fn visit_class_stmt(&mut self, stmt: &Class);
-    fn visit_expression_stmt(&mut self, expr: Expr);
-    // fn visit_function_stmt(&mut self, stmt: &Function);
-    fn visit_if_stmt(&mut self, condition: Expr, then_branch: Box<Stmt>, else_branch: Box<Option<Stmt>>);
-    fn visit_print_stmt(&mut self, expr: Expr);
-    // fn visit_return_stmt(&mut self, stmt: &ReturnStmt);
-    fn visit_var_stmt(&mut self, name: Token, initializer: Option<Expr>);
-    fn visit_while_stmt(&mut self, condition: Expr, body: Box<Stmt>);
+    fn visit_block_stmt(&mut self, stmts: Vec<Stmt>) -> Option<ReturnValue>;
+    // fn visit_class_stmt(&mut self, stmt: &Class) -> Option<ReturnValue>;
+    fn visit_expression_stmt(&mut self, expr: Expr) -> Option<ReturnValue>;
+    fn visit_function_stmt(&mut self, name: Token, params: Vec<Token>, body: Vec<Stmt>) -> Option<ReturnValue>;
+    fn visit_if_stmt(&mut self, condition: Expr, then_branch: Box<Stmt>, else_branch: Box<Option<Stmt>>) -> Option<ReturnValue>;
+    fn visit_print_stmt(&mut self, expr: Expr) -> Option<ReturnValue>;
+    fn visit_return_stmt(&mut self, keyword: Token, value: Option<Expr>) -> Option<ReturnValue>;
+    fn visit_var_stmt(&mut self, name: Token, initializer: Option<Expr>) -> Option<ReturnValue>;
+    fn visit_while_stmt(&mut self, condition: Expr, body: Box<Stmt>) -> Option<ReturnValue>;
 }
 
 impl Visitor for Interpreter {
@@ -43,6 +46,7 @@ impl Visitor for Interpreter {
         }
         None
     }
+
     fn visit_literal_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value> {
         if let crate::expr::Expr::Literal { value } = expr {
             match value.type_ {
@@ -91,6 +95,46 @@ impl Visitor for Interpreter {
             }
         } else {
             panic!("Expected Unary expression.");
+        }
+    }
+
+    fn visit_call_expr(&mut self, expr: &Expr) -> Option<Value> {
+        if let Expr::Call {
+            callee,
+            paren,
+            arguments,
+        } = expr
+        {
+            let function = self.evaluate(&callee.clone());
+            let mut args = Vec::new();
+            for arg in arguments {
+                args.push(self.evaluate(&arg.clone()));
+            }
+            match function {
+                Some(Value::Callable(callable)) => {
+                    if args.len() != callable.arity() {
+                        let error = RuntimeError::new(
+                            paren.clone(),
+                            &format!(
+                                "Expected {} arguments but got {}.",
+                                callable.arity(),
+                                args.len()
+                            ),
+                        );
+                        crate::runtime_error(error);
+                        return None;
+                    }
+                    let ret = Some(callable.call(self, args)?);
+                    return ret;
+                }
+                _ => {
+                    let error = RuntimeError::new(paren.clone(), "Can only call functions and classes");
+                    crate::runtime_error(error);
+                    None
+                }
+            }
+        } else {
+            None
         }
     }
 
@@ -154,10 +198,9 @@ impl Visitor for Interpreter {
                         }
                         (Some(Value::String(l_str)), Some(Value::String(r_str))) => {
                             // l_str and r_str are the actual `String` values inside the `Value::String`
-                            let l = &l_str[8..(6 + ((l_str.len() - 7) / 2))];
-                            let r = &r_str[8..(6 + ((r_str.len() - 7) / 2))];
-                            println!("Concatenating strings: {} + {}", l, r);
-                            Some(Value::String(format!("{}{}", l, r))) // Concatenation of strings
+                            let l = &l_str[1..(l_str.len() - 1)];
+                            let r = &r_str[1..(r_str.len() - 1)];
+                            Some(Value::String(format!("\"{}{}\"", l, r)))
                         }
 
                         _ => {
@@ -206,27 +249,41 @@ impl Visitor for Interpreter {
 }
 
 impl StmtVisitor for Interpreter {
-    fn visit_block_stmt(&mut self, stmts: Vec<Stmt>) {
+    fn visit_block_stmt(&mut self, stmts: Vec<Stmt>) -> Option<ReturnValue> {
         let mut new_environment =
             Environment::new(Some(Rc::new(RefCell::new(self.environment.clone()))));
-        self.execute_block(&stmts, &mut new_environment);
+        self.execute_block(&stmts, &mut new_environment)
     }
 
     // fn visit_class_stmt(&mut self, stmt: &Class) {}
 
-    // fn visit_function_stmt(&mut self, stmt: &Function) {}
-
-    fn visit_if_stmt(&mut self, condition: Expr, then_branch: Box<Stmt>, else_branch: Box<Option<Stmt>>) {
-        if Interpreter::is_truthy(self.evaluate(&condition).as_ref()) {
-            self.execute(Some(*then_branch));
-        } else if let Some(else_branch) = *else_branch {
-            self.execute(Some(else_branch));
-        }
+    fn visit_function_stmt(&mut self, name: Token, params: Vec<Token>, body: Vec<Stmt>) -> Option<ReturnValue> {
+        let function = Value::Callable(Box::new(LoxFunction::new(
+            Stmt::Function { name: name.clone(), params, body },
+            self.environment.clone(),
+        )));
+        self.environment.define(name.lexeme.clone(), Some(function));
+        None
     }
 
-    // fn visit_return_stmt(&mut self, stmt: &ReturnStmt) {}
+    fn visit_if_stmt(&mut self, condition: Expr, then_branch: Box<Stmt>, else_branch: Box<Option<Stmt>>) -> Option<ReturnValue> {
+        if Interpreter::is_truthy(self.evaluate(&condition).as_ref()) {
+            return self.execute(Some(*then_branch));
+        } else if let Some(else_branch) = *else_branch {
+            return self.execute(Some(else_branch));
+        }
+        None
+    }
 
-    fn visit_var_stmt(&mut self, name: Token, initializer: Option<Expr>) {
+    fn visit_return_stmt(&mut self, _keyword: Token, value: Option<Expr>) -> Option<ReturnValue> {
+        let mut return_value = None;
+        if let Some(expr) = value {
+            return_value = self.evaluate(&expr);
+        }
+        Some(ReturnValue::new(return_value?))
+    }
+
+    fn visit_var_stmt(&mut self, name: Token, initializer: Option<Expr>) -> Option<ReturnValue> {
         let mut value = None;
         // Evaluate the initializer if it exists
         if let Some(init) = initializer {
@@ -235,25 +292,29 @@ impl StmtVisitor for Interpreter {
 
         // Define the variable in the environment
         self.environment.define(name.lexeme.clone(), value);
+        None
     }
 
-    fn visit_while_stmt(&mut self, condition: Expr, body: Box<Stmt>) {
+    fn visit_while_stmt(&mut self, condition: Expr, body: Box<Stmt>) -> Option<ReturnValue> {
         while Interpreter::is_truthy(self.evaluate(&condition).as_ref()) {
             self.execute(Some(*body.clone()));
         }
+        None
     }
 
-    fn visit_expression_stmt(&mut self, expr: Expr) {
+    fn visit_expression_stmt(&mut self, expr: Expr) -> Option<ReturnValue> {
         self.evaluate(&expr); // Assuming evaluate returns Option<Value>
+        None
     }
 
-    fn visit_print_stmt(&mut self, expr: Expr) {
+    fn visit_print_stmt(&mut self, expr: Expr) -> Option<ReturnValue> {
         if let Some(value) = self.evaluate(&expr) {
             println!("{}", self.stringify(Some(value))); // Assuming stringify exists
         } else {
             // Handle evaluation error if needed, for example:
             eprintln!("Failed to evaluate expression.");
         }
+        None
     }
 }
 
@@ -265,30 +326,34 @@ impl Interpreter {
     }
 
     fn evaluate(&mut self, expr: &Expr) -> Option<Value> {
-        let visitor = Interpreter {
-            environment: Environment::new(None),
-        };
         expr.accept_interp(self) // Call accept to recursively evaluate the expression
     }
 
-    fn execute(&mut self, stmt: Option<Stmt>) {
-        let visitor = Interpreter {
-            environment: Environment::new(None),
-        };
-        stmt.expect("REASON").accept(self);
+    fn execute(&mut self, stmt: Option<Stmt>) -> Option<ReturnValue> {
+        stmt.clone().expect("REASON").accept(self)
     }
 
-    fn execute_block(&mut self, statements: &[Stmt], environment: &mut Environment) {
+    pub fn execute_block(&mut self, statements: &[Stmt], environment: &mut Environment) -> Option<ReturnValue> {
         // Store the current environment
         let previous = std::mem::replace(&mut self.environment, environment.clone());
 
         // Execute statements in the new environment
         for statement in statements {
-            self.execute(Some(statement.clone()));
+            let result = self.execute(Some(statement.clone()));
+            match result {
+                Some(ReturnValue { ref value }) => {
+                    //std::mem::replace(&mut self.environment, previous.clone());
+                    // self.environment = previous;
+                    return Some(ReturnValue::new(value.clone()));
+                }
+                _ => (),
+            }
         }
 
         // Restore the previous environment
+        // std::mem::replace(&mut self.environment, previous.clone());
         // self.environment = previous;
+        None
     }
 
     fn parse_string(&self, s: &str) -> Option<Value> {
@@ -355,12 +420,16 @@ impl Interpreter {
         crate::runtime_error(error); // Return None or handle type error appropriately
     }
 
-    pub fn interpret(&mut self, statements: Vec<Option<Stmt>>) {
+    pub fn interpret(&mut self, statements: Vec<Option<Stmt>>) -> Option<ReturnValue> {
         for statement in statements {
             match self.execute(statement) {
-                () => ()
+                Some(ReturnValue { value }) => {
+                    return Some(ReturnValue::new(value));
+                },
+                _ => ()
             }
         }
+        None
     }
 
     fn stringify(&self, value: Option<Value>) -> String {
@@ -377,6 +446,7 @@ impl Interpreter {
                 Value::Boolean(b) => b.to_string(),
                 // Value::Operator(o) => (o.to_string()),
                 Value::String(s) => s.to_string(), // Handle other cases as needed
+                Value::Callable(c) => c.to_string(),
             },
             None => "nil".to_string(),
         }

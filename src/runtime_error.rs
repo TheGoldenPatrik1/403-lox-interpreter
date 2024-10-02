@@ -1,5 +1,4 @@
 use crate::token::Token;
-use std::fmt;
 
 #[derive(Debug)]
 pub struct RuntimeError {

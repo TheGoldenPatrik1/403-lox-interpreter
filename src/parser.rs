@@ -31,6 +31,9 @@ impl Parser {
         if self.match_tokens(vec![TokenType::Var]) {
             return Some(self.var_declaration());
         }
+        if self.match_tokens(vec![TokenType::Fun]) {
+            return Some(self.function("function"));
+        }
 
         match self.statement() {
             Some(stmt) => return Some(stmt),
@@ -51,6 +54,9 @@ impl Parser {
         if self.match_tokens(vec![TokenType::Print]) {
             return Some(self.print_statement());
         }
+        if self.match_tokens(vec![TokenType::Return]) {
+            return Some(self.return_statement());
+        }
         if self.match_tokens(vec![TokenType::While]) {
             return Some(self.while_statement());
         }
@@ -68,23 +74,36 @@ impl Parser {
         Stmt::Print(value)
     }
 
+    fn return_statement(&mut self) -> Stmt {
+        let keyword = self.previous().clone();
+        let value = if !self.check(TokenType::Semicolon) {
+            Some(self.expression())
+        } else {
+            None
+        };
+        self.consume(TokenType::Semicolon, "Expect ';' after return value.");
+        Stmt::Return { keyword, value }
+    }
+
     fn if_statement(&mut self) -> Stmt {
         self.consume(TokenType::LeftParen, "Expect '(' after 'if'.");
         let condition = self.expression();
         self.consume(TokenType::RightParen, "Expect ')' after if condition.");
 
         let then_branch = self.statement();
-        let else_branch = if self.match_tokens(vec![TokenType::Else]) {
-            Some(self.statement())
+        if self.match_tokens(vec![TokenType::Else]) {
+            return Stmt::If {
+                condition: condition,
+                then_branch: Box::new(then_branch.expect("REASON")),
+                else_branch: Box::new(Some(self.statement()).expect("REASON")),
+            };
         } else {
-            None
+            return Stmt::If {
+                condition: condition,
+                then_branch: Box::new(then_branch.expect("REASON")),
+                else_branch: Box::new(None),
+            };
         };
-
-        Stmt::If {
-            condition: condition,
-            then_branch: Box::new(then_branch.expect("REASON")),
-            else_branch: Box::new(else_branch.expect("REASON")),
-        }
     }
 
     fn while_statement(&mut self) -> Stmt {
@@ -177,6 +196,31 @@ impl Parser {
         }
     }
 
+    fn function(&mut self, kind: &str) -> Stmt {
+        let name = self.consume(TokenType::Identifier, &format!("Expect {} name.", kind));
+        self.consume(TokenType::LeftParen, &format!("Expect '(' after {} name.", kind));
+        let mut params: Vec<Token> = Vec::new();
+        if !self.check(TokenType::RightParen) {
+            loop {
+                if params.len() >= 255 {
+                    crate::error_token(self.peek(), "Cannot have more than 255 parameters.");
+                }
+                params.push(self.consume(TokenType::Identifier, "Expect parameter name."));
+                if !self.match_tokens(vec![TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+        self.consume(TokenType::RightParen, "Expect ')' after parameters.");
+        self.consume(TokenType::LeftBrace, &format!("Expect '{{' before {} body.", kind));
+        let body = self.block();
+        Stmt::Function {
+            name,
+            params,
+            body,
+        }
+    }
+
     fn block(&mut self) -> Vec<Stmt> {
         let mut statements: Vec<Stmt> = Vec::new();
 
@@ -192,7 +236,7 @@ impl Parser {
         let expr = self.or();
 
         if self.match_tokens(vec![TokenType::Equal]) {
-            let equals = self.previous().clone();
+            // let equals = self.previous().clone();
             let value = self.assignment(); // Recursive call to assignment
 
             // Check if the expression is a variable expression
@@ -244,24 +288,29 @@ impl Parser {
     fn peek(&self) -> &Token {
         &self.tokens[self.current]
     }
+
     fn previous(&self) -> &Token {
         &self.tokens[self.current - 1]
     }
+
     fn is_at_end(&self) -> bool {
         self.peek().type_ == TokenType::EoF
     }
+
     fn advance(&mut self) -> &Token {
         if !self.is_at_end() {
             self.current += 1;
         }
         self.previous()
     }
+
     fn check(&self, token_type: TokenType) -> bool {
         if self.is_at_end() {
             return false;
         }
         self.peek().type_ == token_type
     }
+
     fn match_tokens(&mut self, token_types: Vec<TokenType>) -> bool {
         for token_type in token_types {
             if self.check(token_type) {
@@ -285,6 +334,7 @@ impl Parser {
         }
         comparison
     }
+
     fn comparison(&mut self) -> Expr {
         let mut expr = self.term();
         while self.match_tokens(vec![
@@ -303,6 +353,7 @@ impl Parser {
         }
         expr
     }
+
     fn term(&mut self) -> Expr {
         let mut expr = self.factor();
         while self.match_tokens(vec![TokenType::Minus, TokenType::Plus]) {
@@ -316,6 +367,7 @@ impl Parser {
         }
         expr
     }
+
     fn factor(&mut self) -> Expr {
         let mut expr = self.unary();
         while self.match_tokens(vec![TokenType::Slash, TokenType::Star]) {
@@ -329,6 +381,7 @@ impl Parser {
         }
         expr
     }
+
     fn unary(&mut self) -> Expr {
         if self.match_tokens(vec![TokenType::Bang, TokenType::Minus]) {
             let operator = self.previous().clone();
@@ -338,8 +391,42 @@ impl Parser {
                 right: Box::new(right),
             };
         }
-        self.primary()
+        self.call()
     }
+
+    fn call(&mut self) -> Expr {
+        let mut expr = self.primary();
+        loop {
+            if self.match_tokens(vec![TokenType::LeftParen]) {
+                expr = self.finish_call(expr);
+            } else {
+                break;
+            }
+        }
+        expr
+    }
+
+    fn finish_call(&mut self, callee: Expr) -> Expr {
+        let mut arguments: Vec<Expr> = Vec::new();
+        if !self.check(TokenType::RightParen) {
+            loop {
+                if arguments.len() >= 255 {
+                    crate::error_token(self.peek(), "Cannot have more than 255 arguments.");
+                }
+                arguments.push(self.expression());
+                if !self.match_tokens(vec![TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+        let paren = self.consume(TokenType::RightParen, "Expect ')' after arguments.");
+        Expr::Call {
+            callee: Box::new(callee),
+            paren,
+            arguments,
+        }
+    }
+
     fn primary(&mut self) -> Expr {
         if self.match_tokens(vec![TokenType::False]) {
             return Expr::Literal {
