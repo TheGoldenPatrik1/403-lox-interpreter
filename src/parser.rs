@@ -171,7 +171,10 @@ impl Parser {
     fn expression_statement(&mut self) -> Stmt {
         let value = self.expression();
         self.consume(TokenType::Semicolon, "Expect ';' after value.");
-        Stmt::Print(value)
+        Stmt::Var {
+            name: Token::new(TokenType::Identifier, "temp".to_string(), None, 0),
+            initializer: Some(value),
+        }
     }
 
     fn block(&mut self) -> Vec<Stmt> {
