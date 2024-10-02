@@ -2,16 +2,18 @@ use crate::runtime_error::RuntimeError;
 use crate::token::Token;
 use crate::token_type::TokenType;
 use crate::value::Value;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    enclosing: Option<Box<Environment>>,
+    enclosing: Option<Rc<RefCell<Environment>>>,
     values: HashMap<String, Option<Value>>,
 }
 
 impl Environment {
-    pub fn new(enclosing: Option<Box<Environment>>) -> Environment {
+    pub fn new(enclosing: Option<Rc<RefCell<Environment>>>) -> Environment {
         Environment {
             enclosing,
             values: HashMap::new(),
@@ -24,7 +26,7 @@ impl Environment {
         }
 
         if let Some(enclosing_env) = self.enclosing.as_ref() {
-            return enclosing_env.get(name);
+            return enclosing_env.borrow().get(name);
         }
 
         let error = RuntimeError::new(name.clone(), "Variable not found");
@@ -33,15 +35,22 @@ impl Environment {
         return Value::String("".to_string());
     }
 
-    pub fn assign(&mut self, name: Token, value: Option<Value>) {
+    pub fn assign(&mut self, name: Token, value: Value) {
         if self.values.contains_key(&name.lexeme) {
-            self.values.insert(name.lexeme.clone(), value);
-        } else if let Some(ref mut enclosing_env) = self.enclosing {
-            enclosing_env.assign(name, value);
+            // Assign the value in the current environment
+            self.values.insert(name.lexeme.clone(), Some(value));
+            return;
+        }
+        if let Some(ref enclosing_env) = self.enclosing {
+            // Recursively assign in the enclosing environment
+            enclosing_env.borrow_mut().assign(name, value);
             return;
         } else {
-            let error_message = format!("Undefined variable '{}'", name.lexeme);
-            let error = RuntimeError::new(name.clone(), &error_message);
+            // Throw an error if the variable is not found
+            let error = RuntimeError::new(
+                name.clone(),
+                &format!("Undefined variable '{}'", name.lexeme),
+            );
             crate::runtime_error(error);
         }
     }

@@ -5,6 +5,8 @@ use crate::stmt::Stmt;
 use crate::token::Token;
 use crate::token_type::TokenType;
 use crate::value::Value;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct Interpreter {
     environment: Environment,
@@ -35,7 +37,7 @@ impl Visitor for Interpreter {
     fn visit_assign_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value> {
         if let Expr::Assign { name, value } = expr {
             let v = self.evaluate(&value);
-            self.environment.assign(name.clone(), v.clone());
+            self.environment.assign(name.clone(), v.clone()?);
             return v;
         }
         None
@@ -176,7 +178,8 @@ impl Visitor for Interpreter {
 
 impl StmtVisitor for Interpreter {
     fn visit_block_stmt(&mut self, stmts: Vec<Stmt>) {
-        let mut new_environment = Environment::new(Some(Box::new(self.environment.clone())));
+        let mut new_environment =
+            Environment::new(Some(Rc::new(RefCell::new(self.environment.clone()))));
         self.execute_block(&stmts, &mut new_environment);
     }
     // fn visit_class_stmt(&self, stmt: &Class) {}
@@ -240,7 +243,7 @@ impl Interpreter {
         }
 
         // Restore the previous environment
-        self.environment = previous;
+        // self.environment = previous;
     }
 
     fn parse_string(&self, s: &str) -> Option<Value> {
