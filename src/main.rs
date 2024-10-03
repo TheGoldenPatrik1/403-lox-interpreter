@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::env;
 use std::fs::File;
 use std::io;
-use std::io::{Read, Write};
+use std::io::{BufReader, BufRead, Read, Write};
 use std::path::Path;
 
 mod ast_printer;
@@ -19,6 +19,7 @@ mod value;
 mod callable;
 mod lox_function;
 mod return_value;
+mod write_output;
 
 thread_local! {
     static HAD_ERROR: Cell<bool> = Cell::new(false);
@@ -33,13 +34,13 @@ fn main() {
         eprintln!("Usage: cargo run <file_path>");
         std::process::exit(1);
     } else if args.len() == 2 {
-        run_file(&args[1]);
+        run_file(&args[1], "");
     } else {
         run_prompt();
     }
 }
 
-fn run_file(file_path: &str) {
+fn run_file(file_path: &str, output_file: &str) {
     let path = Path::new(file_path);
     let mut file = match File::open(&path) {
         Ok(file) => file,
@@ -59,7 +60,7 @@ fn run_file(file_path: &str) {
         std::process::exit(75);
     }
 
-    run(&contents);
+    run(&contents, output_file);
 }
 
 fn run_prompt() {
@@ -74,7 +75,7 @@ fn run_prompt() {
                 break;
             }
             Ok(_) => {
-                run(&input.trim());
+                run(&input.trim(), "");
             }
             Err(err) => {
                 eprintln!("Error reading input: {}", err);
@@ -89,7 +90,7 @@ fn run_prompt() {
     });
 }
 
-fn run(source: &str) {
+fn run(source: &str, output_file: &str) {
     HAD_ERROR.with(|had_error| {
         had_error.set(false);
     });
@@ -104,7 +105,7 @@ fn run(source: &str) {
     if HAD_ERROR.with(|had_error| had_error.get()) {
         return;
     }
-    let mut interp = interpreter::Interpreter::new();
+    let mut interp = interpreter::Interpreter::new(output_file);
     interp.interpret(statements);
 }
 
@@ -132,4 +133,51 @@ fn report(line: i32, location: &str, message: &str) {
     HAD_ERROR.with(|had_error| {
         had_error.set(true);
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn run_test(test_num: i32) -> io::Result<()> {
+        // Define file names
+        let test_src = format!("./tests/test{}.lox", test_num);
+        let test_output = format!("./output/actual/test{}.txt", test_num);
+        let test_comparison = format!("./output/expected/test{}.txt", test_num);
+
+        // Run the test
+        run_file(&test_src, &test_output);
+
+        // Open the files
+        let output_file = File::open(&test_output)?;
+        let expected_file = File::open(&test_comparison)?;
+
+        // Compare the contents of the files line by line
+        let output_reader = BufReader::new(output_file);
+        let expected_reader = BufReader::new(expected_file);
+
+        for (output_line, expected_line) in output_reader.lines().zip(expected_reader.lines()) {
+            let output_line = output_line?;
+            let expected_line = expected_line?;
+            
+            if output_line != expected_line {
+                eprintln!(
+                    "Test {} failed: Output and expected files differ.\nOutput: {}\nExpected: {}",
+                    test_num, output_line, expected_line
+                );
+                return Ok(());
+            }
+        }
+
+        println!("Test {} passed: Output matches expected.", test_num);
+        Ok(())
+    }
+
+    #[test]
+    fn test1() {
+        match run_test(1) {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "Error: {}", err),
+        }
+    }
 }

@@ -7,11 +7,13 @@ use crate::token_type::TokenType;
 use crate::value::Value;
 use crate::lox_function::LoxFunction;
 use crate::return_value::ReturnValue;
+use crate::write_output::write_output;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Interpreter {
     pub environment: Environment,
+    output_file: String,
 }
 
 pub trait Visitor {
@@ -308,7 +310,7 @@ impl StmtVisitor for Interpreter {
 
     fn visit_print_stmt(&mut self, expr: Expr) -> Option<ReturnValue> {
         if let Some(value) = self.evaluate(&expr) {
-            println!("{}", self.stringify(Some(value))); // Assuming stringify exists
+            let _ = write_output(&self.output_file, &self.stringify(Some(value)));
         } else {
             // Handle evaluation error if needed, for example:
             eprintln!("Failed to evaluate expression.");
@@ -318,9 +320,10 @@ impl StmtVisitor for Interpreter {
 }
 
 impl Interpreter {
-    pub fn new() -> Self {
+    pub fn new(output_file: &str) -> Self {
         Interpreter {
             environment: Environment::new(None),
+            output_file: output_file.to_string(),
         }
     }
 

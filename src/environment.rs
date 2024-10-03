@@ -1,6 +1,5 @@
 use crate::runtime_error::RuntimeError;
 use crate::token::Token;
-use crate::token_type::TokenType;
 use crate::value::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;

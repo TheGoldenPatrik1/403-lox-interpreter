@@ -1,6 +1,5 @@
 use crate::interpreter::Interpreter;
 use crate::value::Value;
-use crate::return_value::ReturnValue;
 use std::fmt;
 
 pub trait Callable {
