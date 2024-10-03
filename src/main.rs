@@ -139,7 +139,9 @@ fn report(line: i32, location: &str, message: &str) {
 mod tests {
     use super::*;
 
-    fn run_test(test_num: i32) -> io::Result<()> {
+    enum Success { Standard }
+
+    fn run_test(test_num: i32) -> Result<Success, String> {
         // Define file names
         let test_src = format!("./tests/test{}.lox", test_num);
         let test_output = format!("./output/actual/test{}.txt", test_num);
@@ -149,35 +151,35 @@ mod tests {
         run_file(&test_src, &test_output);
 
         // Open the files
-        let output_file = File::open(&test_output)?;
-        let expected_file = File::open(&test_comparison)?;
+        let output_file = File::open(&test_output).map_err(|_| "Failed to open output file")?;
+        let expected_file = File::open(&test_comparison).map_err(|_| "Failed to open expected file")?;
 
-        // Compare the contents of the files line by line
+        // Create buffered readers for the files
         let output_reader = BufReader::new(output_file);
         let expected_reader = BufReader::new(expected_file);
 
+        // Compare the contents of the files line by line
         for (output_line, expected_line) in output_reader.lines().zip(expected_reader.lines()) {
-            let output_line = output_line?;
-            let expected_line = expected_line?;
+            let output_line = output_line.map_err(|_| "Failed to read from output file")?;
+            let expected_line = expected_line.map_err(|_| "Failed to read from expected file")?;
             
             if output_line != expected_line {
-                eprintln!(
-                    "Test {} failed: Output and expected files differ.\nOutput: {}\nExpected: {}",
+                let err_str = format!(
+                    "Test {} failed: output and expected files differ.\nOutput: '{}'\nExpected: '{}'",
                     test_num, output_line, expected_line
                 );
-                return Ok(());
+                return Err(err_str);
             }
         }
 
-        println!("Test {} passed: Output matches expected.", test_num);
-        Ok(())
+        Ok(Success::Standard)
     }
 
     #[test]
     fn test1() {
         match run_test(1) {
             Ok(_) => assert!(true),
-            Err(err) => assert!(false, "Error: {}", err),
+            Err(err) => assert!(false, "{}", err),
         }
     }
 }
