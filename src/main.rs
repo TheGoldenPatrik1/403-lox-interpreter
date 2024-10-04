@@ -20,6 +20,7 @@ mod callable;
 mod lox_function;
 mod return_value;
 mod write_output;
+mod resolver;
 
 thread_local! {
     static HAD_ERROR: Cell<bool> = Cell::new(false);
