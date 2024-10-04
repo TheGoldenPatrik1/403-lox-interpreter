@@ -1,18 +1,18 @@
 use crate::environment::Environment;
 use crate::expr::Expr;
+use crate::lox_function::LoxFunction;
+use crate::return_value::ReturnValue;
 use crate::runtime_error::RuntimeError;
 use crate::stmt::Stmt;
 use crate::token::Token;
 use crate::token_type::TokenType;
 use crate::value::Value;
-use crate::lox_function::LoxFunction;
-use crate::return_value::ReturnValue;
 use crate::write_output::write_output;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Interpreter {
-    pub environment: Environment,
+    pub environment: Rc<RefCell<Environment>>,
     output_file: String,
 }
 
@@ -31,8 +31,18 @@ pub trait StmtVisitor {
     fn visit_block_stmt(&mut self, stmts: Vec<Stmt>) -> Option<ReturnValue>;
     // fn visit_class_stmt(&mut self, stmt: &Class) -> Option<ReturnValue>;
     fn visit_expression_stmt(&mut self, expr: Expr) -> Option<ReturnValue>;
-    fn visit_function_stmt(&mut self, name: Token, params: Vec<Token>, body: Vec<Stmt>) -> Option<ReturnValue>;
-    fn visit_if_stmt(&mut self, condition: Expr, then_branch: Box<Stmt>, else_branch: Box<Option<Stmt>>) -> Option<ReturnValue>;
+    fn visit_function_stmt(
+        &mut self,
+        name: Token,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+    ) -> Option<ReturnValue>;
+    fn visit_if_stmt(
+        &mut self,
+        condition: Expr,
+        then_branch: Box<Stmt>,
+        else_branch: Box<Option<Stmt>>,
+    ) -> Option<ReturnValue>;
     fn visit_print_stmt(&mut self, expr: Expr) -> Option<ReturnValue>;
     fn visit_return_stmt(&mut self, keyword: Token, value: Option<Expr>) -> Option<ReturnValue>;
     fn visit_var_stmt(&mut self, name: Token, initializer: Option<Expr>) -> Option<ReturnValue>;
@@ -43,7 +53,9 @@ impl Visitor for Interpreter {
     fn visit_assign_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value> {
         if let Expr::Assign { name, value } = expr {
             let v = self.evaluate(&value);
-            self.environment.assign(name.clone(), v.clone()?);
+            self.environment
+                .borrow_mut()
+                .assign(name.clone(), v.clone()?);
             return v;
         }
         None
@@ -126,11 +138,13 @@ impl Visitor for Interpreter {
                         crate::runtime_error(error);
                         return None;
                     }
+                    // println!("INTERP ENVIRONMENT {:?}", self.environment);
                     let ret = Some(callable.call(self, args)?);
                     return ret;
                 }
                 _ => {
-                    let error = RuntimeError::new(paren.clone(), "Can only call functions and classes");
+                    let error =
+                        RuntimeError::new(paren.clone(), "Can only call functions and classes");
                     crate::runtime_error(error);
                     None
                 }
@@ -222,7 +236,7 @@ impl Visitor for Interpreter {
 
     fn visit_variable_expr(&self, expr: &Expr) -> Option<Value> {
         if let Expr::Variable { name } = expr {
-            return Some(self.environment.get(name));
+            return Some(self.environment.borrow_mut().get(name));
         }
         None
     }
@@ -252,22 +266,41 @@ impl Visitor for Interpreter {
 
 impl StmtVisitor for Interpreter {
     fn visit_block_stmt(&mut self, stmts: Vec<Stmt>) -> Option<ReturnValue> {
-        let mut new_environment =
-            Environment::new(Some(Rc::new(RefCell::new(self.environment.clone()))));
-        self.execute_block(&stmts, &mut new_environment)
+        let new_environment = Rc::new(RefCell::new(Environment::new(Some(Rc::new(RefCell::new(
+            self.environment.borrow_mut().clone(),
+        ))))));
+        // println!("NEW ENVIRONMENT {:?}", new_environment);
+        self.execute_block(&stmts, new_environment)
     }
 
     // fn visit_class_stmt(&mut self, stmt: &Class) {}
 
-    fn visit_function_stmt(&mut self, name: Token, params: Vec<Token>, body: Vec<Stmt>) -> Option<ReturnValue> {
+    fn visit_function_stmt(
+        &mut self,
+        name: Token,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+    ) -> Option<ReturnValue> {
         let function = Value::Callable(Box::new(LoxFunction::new(
-            Stmt::Function { name: name.clone(), params, body }
+            Stmt::Function {
+                name: name.clone(),
+                params,
+                body,
+            },
+            Rc::new(RefCell::new(self.environment.borrow_mut().clone())),
         )));
-        self.environment.define(name.lexeme.clone(), Some(function));
+        self.environment
+            .borrow_mut()
+            .define(name.lexeme.clone(), Some(function));
         None
     }
 
-    fn visit_if_stmt(&mut self, condition: Expr, then_branch: Box<Stmt>, else_branch: Box<Option<Stmt>>) -> Option<ReturnValue> {
+    fn visit_if_stmt(
+        &mut self,
+        condition: Expr,
+        then_branch: Box<Stmt>,
+        else_branch: Box<Option<Stmt>>,
+    ) -> Option<ReturnValue> {
         if Interpreter::is_truthy(self.evaluate(&condition).as_ref()) {
             return self.execute(Some(*then_branch));
         } else if let Some(else_branch) = *else_branch {
@@ -292,7 +325,9 @@ impl StmtVisitor for Interpreter {
         }
 
         // Define the variable in the environment
-        self.environment.define(name.lexeme.clone(), value);
+        self.environment
+            .borrow_mut()
+            .define(name.lexeme.clone(), value);
         None
     }
 
@@ -322,7 +357,7 @@ impl StmtVisitor for Interpreter {
 impl Interpreter {
     pub fn new(output_file: &str) -> Self {
         Interpreter {
-            environment: Environment::new(None),
+            environment: Rc::new(RefCell::new(Environment::new(None))),
             output_file: output_file.to_string(),
         }
     }
@@ -335,7 +370,11 @@ impl Interpreter {
         stmt.clone().expect("REASON").accept(self)
     }
 
-    pub fn execute_block(&mut self, statements: &[Stmt], environment: &mut Environment) -> Option<ReturnValue> {
+    pub fn execute_block(
+        &mut self,
+        statements: &[Stmt],
+        environment: Rc<RefCell<Environment>>,
+    ) -> Option<ReturnValue> {
         // Store the current environment
         let previous = std::mem::replace(&mut self.environment, environment.clone());
 
@@ -355,6 +394,32 @@ impl Interpreter {
         // Restore the previous environment
         // std::mem::replace(&mut self.environment, previous.clone());
         // self.environment = previous;
+        None
+    }
+
+    pub fn execute_function_block(
+        &mut self,
+        statements: &[Stmt],
+        // environment: &mut Environment,
+        environment: Rc<RefCell<Environment>>,
+    ) -> Option<ReturnValue> {
+        // println!("EXECUTE {:?}", environment);
+        let previous = std::mem::replace(&mut self.environment, environment.clone());
+        // println!("");
+
+        for statement in statements {
+            let result = self.execute(Some(statement.clone()));
+            if let Some(ReturnValue { ref value }) = result {
+                // Restore the previous environment before returning
+                // std::mem::replace(&mut self.environment, previous.clone());
+                self.environment = previous.clone();
+                return Some(ReturnValue::new(value.clone()));
+            }
+        }
+
+        // Restore the previous environment after executing all statements
+        // std::mem::replace(&mut self.environment, previous);
+        self.environment = previous.clone();
         None
     }
 
@@ -427,8 +492,8 @@ impl Interpreter {
             match self.execute(statement) {
                 Some(ReturnValue { value }) => {
                     return Some(ReturnValue::new(value));
-                },
-                _ => ()
+                }
+                _ => (),
             }
         }
         None
