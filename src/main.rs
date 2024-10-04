@@ -141,11 +141,11 @@ mod tests {
 
     enum Success { Standard }
 
-    fn run_test(test_name: &str) -> Result<Success, String> {
+    fn run_test(folder_name: &str, test_name: &str) -> Result<Success, String> {
         // Define file names
-        let test_src = format!("./tests/{}.lox", test_name);
-        let test_output = format!("./output/actual/{}.txt", test_name);
-        let test_comparison = format!("./output/expected/{}.txt", test_name);
+        let test_src = format!("./tests/{}/{}.lox", folder_name, test_name);
+        let test_output = format!("./output/actual/{}/{}.txt", folder_name, test_name);
+        let test_comparison = format!("./output/expected/{}/{}.txt", folder_name, test_name);
 
         // Clear the output file
         File::create(&test_output).map_err(|_| "Failed to clear output file")?;
@@ -165,8 +165,8 @@ mod tests {
 
         if output_line_count != expected_line_count {
             let err_str = format!(
-                "Test {} failed: actual and expected files have different numbers of lines.\nActual: {}\nExpected: {}",
-                test_name, output_line_count, expected_line_count
+                "Test {} {} failed: actual and expected files have different numbers of lines.\nActual: {}\nExpected: {}",
+                folder_name, test_name, output_line_count, expected_line_count
             );
             return Err(err_str);
         }
@@ -182,8 +182,8 @@ mod tests {
             
             if output_line != expected_line {
                 let err_str = format!(
-                    "Test {} failed: actual and expected values differ.\nActual: '{}'\nExpected: '{}'",
-                    test_name, output_line, expected_line
+                    "Test {} {} failed: actual and expected values differ.\nActual: '{}'\nExpected: '{}'",
+                    folder_name, test_name, output_line, expected_line
                 );
                 return Err(err_str);
             }
@@ -193,26 +193,26 @@ mod tests {
     }
 
     #[test]
-    fn assignment_associativity() {
-        match run_test("assignment_associativity") {
-            Ok(_) => assert!(true),
-            Err(err) => assert!(false, "{}", err),
-        }
+    fn assignment_grouping() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("assignment", "grouping")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
     }
 
     #[test]
     fn assignment_global() {
-        match run_test("assignment_global") {
+        match run_test("assignment", "global") {
             Ok(_) => assert!(true),
             Err(err) => assert!(false, "{}", err),
         }
     }
 
     #[test]
-    fn assignment_grouping() {
-        let result = std::panic::catch_unwind(|| {
-            run_test("assignment_grouping")
-        });
-        assert!(result.is_err(), "Expected a panic but did not get one");
+    fn assignment_associativity() {
+        match run_test("assignment", "associativity") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
     }
 }
