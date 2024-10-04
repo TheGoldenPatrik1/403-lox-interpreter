@@ -1,7 +1,7 @@
 use crate::expr::Expr;
 use crate::interpreter::StmtVisitor;
-use crate::token::Token;
 use crate::return_value::ReturnValue;
+use crate::token::Token;
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
@@ -41,20 +41,22 @@ impl Stmt {
             Stmt::Expression(expr) => visitor.visit_expression_stmt(expr.clone()),
             Stmt::Function { name, params, body } => {
                 visitor.visit_function_stmt(name.clone(), params.clone(), body.clone())
-            },
-            Stmt::If { condition, then_branch, else_branch } => {
-                visitor.visit_if_stmt(condition.clone(), then_branch.clone(), else_branch.clone())
-            },
+            }
+            Stmt::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => visitor.visit_if_stmt(condition.clone(), then_branch.clone(), else_branch.clone()),
             Stmt::Print(print_stmt) => visitor.visit_print_stmt(print_stmt.clone()),
             Stmt::Return { keyword, value } => {
                 visitor.visit_return_stmt(keyword.clone(), value.clone())
-            },
+            }
             Stmt::Var { name, initializer } => {
                 visitor.visit_var_stmt(name.clone(), initializer.clone())
             }
             Stmt::While { condition, body } => {
                 visitor.visit_while_stmt(condition.clone(), body.clone())
-            },
+            }
         }
     }
 }

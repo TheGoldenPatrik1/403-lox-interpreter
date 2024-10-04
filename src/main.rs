@@ -2,25 +2,25 @@ use std::cell::Cell;
 use std::env;
 use std::fs::File;
 use std::io;
-use std::io::{BufReader, BufRead, Read, Write};
+use std::io::{Read, Write};
 use std::path::Path;
 
 mod ast_printer;
+mod callable;
 mod environment;
 mod expr;
 mod interpreter;
+mod lox_function;
 mod parser;
+mod resolver;
+mod return_value;
 mod runtime_error;
 mod scanner;
 mod stmt;
 mod token;
 mod token_type;
 mod value;
-mod callable;
-mod lox_function;
-mod return_value;
 mod write_output;
-mod resolver;
 
 thread_local! {
     static HAD_ERROR: Cell<bool> = Cell::new(false);
@@ -106,7 +106,12 @@ fn run(source: &str, output_file: &str) {
     if HAD_ERROR.with(|had_error| had_error.get()) {
         return;
     }
+
     let mut interp = interpreter::Interpreter::new(output_file);
+
+    let mut resolver = resolver::Resolver::new(interp.clone());
+    resolver.resolve(statements.clone());
+
     interp.interpret(statements);
 }
 
@@ -140,7 +145,9 @@ fn report(line: i32, location: &str, message: &str) {
 mod tests {
     use super::*;
 
-    enum Success { Standard }
+    enum Success {
+        Standard,
+    }
 
     fn run_test(folder_name: &str, test_name: &str) -> Result<Success, String> {
         // Define file names
@@ -156,13 +163,19 @@ mod tests {
 
         // Open the files
         let output_file = File::open(&test_output).map_err(|_| "Failed to open output file")?;
-        let expected_file = File::open(&test_comparison).map_err(|_| "Failed to open expected file")?;
+        let expected_file =
+            File::open(&test_comparison).map_err(|_| "Failed to open expected file")?;
 
         // Compare number of lines in the files (by re-opening the files)
-        let output_line_count = BufReader::new(File::open(&test_output).map_err(|_| "Failed to open output file")?)
-            .lines().count();
-        let expected_line_count = BufReader::new(File::open(&test_comparison).map_err(|_| "Failed to open expected file")?)
-            .lines().count();
+        let output_line_count =
+            BufReader::new(File::open(&test_output).map_err(|_| "Failed to open output file")?)
+                .lines()
+                .count();
+        let expected_line_count = BufReader::new(
+            File::open(&test_comparison).map_err(|_| "Failed to open expected file")?,
+        )
+        .lines()
+        .count();
 
         if output_line_count != expected_line_count {
             let err_str = format!(
@@ -180,7 +193,7 @@ mod tests {
         for (output_line, expected_line) in output_reader.lines().zip(expected_reader.lines()) {
             let output_line = output_line.map_err(|_| "Failed to read from output file")?;
             let expected_line = expected_line.map_err(|_| "Failed to read from expected file")?;
-            
+
             if output_line != expected_line {
                 let err_str = format!(
                     "Test {} {} failed: actual and expected values differ.\nActual: '{}'\nExpected: '{}'",
@@ -195,9 +208,7 @@ mod tests {
 
     #[test]
     fn assignment_grouping() {
-        let result = std::panic::catch_unwind(|| {
-            run_test("assignment", "grouping")
-        });
+        let result = std::panic::catch_unwind(|| run_test("assignment", "grouping"));
         assert!(result.is_err(), "Expected a panic but did not get one");
     }
 

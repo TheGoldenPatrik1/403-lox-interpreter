@@ -198,7 +198,10 @@ impl Parser {
 
     fn function(&mut self, kind: &str) -> Stmt {
         let name = self.consume(TokenType::Identifier, &format!("Expect {} name.", kind));
-        self.consume(TokenType::LeftParen, &format!("Expect '(' after {} name.", kind));
+        self.consume(
+            TokenType::LeftParen,
+            &format!("Expect '(' after {} name.", kind),
+        );
         let mut params: Vec<Token> = Vec::new();
         if !self.check(TokenType::RightParen) {
             loop {
@@ -212,13 +215,12 @@ impl Parser {
             }
         }
         self.consume(TokenType::RightParen, "Expect ')' after parameters.");
-        self.consume(TokenType::LeftBrace, &format!("Expect '{{' before {} body.", kind));
+        self.consume(
+            TokenType::LeftBrace,
+            &format!("Expect '{{' before {} body.", kind),
+        );
         let body = self.block();
-        Stmt::Function {
-            name,
-            params,
-            body,
-        }
+        Stmt::Function { name, params, body }
     }
 
     fn block(&mut self) -> Vec<Stmt> {

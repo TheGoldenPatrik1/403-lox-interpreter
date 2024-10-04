@@ -2,7 +2,7 @@ use crate::interpreter::Visitor;
 use crate::token::Token;
 use crate::value::Value;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Expr {
     Assign {
         name: Token,
@@ -60,9 +60,7 @@ impl Expr {
                 callee: _,
                 paren,
                 arguments: _,
-            } => {
-                self.parenthesize(&paren.lexeme, vec![])
-            }
+            } => self.parenthesize(&paren.lexeme, vec![]),
         }
     }
 
@@ -76,7 +74,10 @@ impl Expr {
             } => visitor.visit_binary_expr(self),
             Expr::Grouping { expression: _ } => visitor.visit_grouping_expr(self),
             Expr::Literal { value: _ } => visitor.visit_literal_expr(self),
-            Expr::Unary { operator: _, right: _ } => visitor.visit_unary_expr(self),
+            Expr::Unary {
+                operator: _,
+                right: _,
+            } => visitor.visit_unary_expr(self),
             Expr::Variable { name: _ } => visitor.visit_variable_expr(self),
             Expr::Logical {
                 left: _,

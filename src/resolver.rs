@@ -1,11 +1,11 @@
-use crate::interpreter::Visitor;
-use crate::interpreter::StmtVisitor;
-use crate::interpreter::Interpreter;
-use crate::stmt::Stmt;
 use crate::expr::Expr;
-use crate::value::Value;
+use crate::interpreter::Interpreter;
+use crate::interpreter::StmtVisitor;
+use crate::interpreter::Visitor;
 use crate::return_value::ReturnValue;
+use crate::stmt::Stmt;
 use crate::token::Token;
+use crate::value::Value;
 
 use std::collections::HashMap;
 
@@ -29,7 +29,7 @@ impl Visitor for Resolver {
                 self.resolve_local(expr, name);
                 None
             }
-            _ => None
+            _ => None,
         }
     }
 
@@ -37,7 +37,7 @@ impl Visitor for Resolver {
         None
     }
 
-    fn visit_grouping_expr(&mut self, expr: &Expr) -> Option<Value>{
+    fn visit_grouping_expr(&mut self, expr: &Expr) -> Option<Value> {
         match expr {
             Expr::Grouping { expression } => {
                 self.resolve_expr(expression);
@@ -70,7 +70,9 @@ impl Visitor for Resolver {
 
     fn visit_call_expr(&mut self, expr: &Expr) -> Option<Value> {
         match expr {
-            Expr::Call { callee, arguments, .. } => {
+            Expr::Call {
+                callee, arguments, ..
+            } => {
                 self.resolve_expr(callee);
                 for arg in arguments {
                     self.resolve_expr(&Box::new(arg.clone()));
@@ -81,7 +83,7 @@ impl Visitor for Resolver {
         None
     }
 
-    fn visit_variable_expr(&self, expr: &Expr) -> Option<Value> {
+    fn visit_variable_expr(&mut self, expr: &Expr) -> Option<Value> {
         if !self.scopes.is_empty() {
             let scope = self.scopes.last().unwrap();
             match expr {
@@ -114,7 +116,7 @@ impl Visitor for Resolver {
 impl StmtVisitor for Resolver {
     fn visit_block_stmt(&mut self, stmts: Vec<Stmt>) -> Option<ReturnValue> {
         self.begin_scope();
-        let result = self.resolve(stmts);
+        let result = self.resolve(stmts.clone().into_iter().map(Some).collect());
         self.end_scope();
         result
     }
@@ -127,14 +129,24 @@ impl StmtVisitor for Resolver {
         None
     }
 
-    fn visit_function_stmt(&mut self, name: Token, params: Vec<Token>, body: Vec<Stmt>) -> Option<ReturnValue> {
+    fn visit_function_stmt(
+        &mut self,
+        name: Token,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+    ) -> Option<ReturnValue> {
         self.declare(name.clone());
         self.define(name.clone());
         self.resolve_function(params.clone(), body.clone(), FunctionType::Function);
         None
     }
 
-    fn visit_if_stmt(&mut self, condition: Expr, then_branch: Box<Stmt>, else_branch: Box<Option<Stmt>>) -> Option<ReturnValue> {
+    fn visit_if_stmt(
+        &mut self,
+        condition: Expr,
+        then_branch: Box<Stmt>,
+        else_branch: Box<Option<Stmt>>,
+    ) -> Option<ReturnValue> {
         self.resolve_expr(&Box::new(condition));
         self.resolve_stmt(*then_branch);
         if let Some(else_branch) = *else_branch {
@@ -154,7 +166,7 @@ impl StmtVisitor for Resolver {
         }
 
         if value.is_some() {
-            return self.resolve_stmt(Stmt::Return{ keyword, value });
+            self.resolve_expr(&Box::new(value.unwrap()));
         }
         None
     }
@@ -162,7 +174,7 @@ impl StmtVisitor for Resolver {
     fn visit_var_stmt(&mut self, name: Token, initializer: Option<Expr>) -> Option<ReturnValue> {
         self.declare(name.clone());
         if initializer.is_some() {
-            self.resolve_stmt(Stmt::Var{ name: name.clone(), initializer: initializer.clone() });
+            self.resolve_expr(&Box::new(initializer.clone().unwrap()));
         }
         self.define(name.clone());
         None
@@ -184,9 +196,9 @@ impl Resolver {
         }
     }
 
-    fn resolve(&mut self, stmts: Vec<Stmt>) -> Option<ReturnValue> {
+    pub fn resolve(&mut self, stmts: Vec<Option<Stmt>>) -> Option<ReturnValue> {
         for stmt in stmts {
-            let ret = self.resolve_stmt(stmt);
+            let ret = self.resolve_stmt(stmt?);
             if ret.is_some() {
                 return ret;
             }
@@ -229,15 +241,20 @@ impl Resolver {
         scope.insert(name.lexeme.clone(), true);
     }
 
-    fn resolve_local(&self, expr: &Expr, name: &Token) {
+    fn resolve_local(&mut self, expr: &Expr, name: &Token) {
         for (i, scope) in self.scopes.iter().enumerate().rev() {
             if scope.contains_key(&name.lexeme) {
-                // self.interpreter.resolve(expr, i);
+                self.interpreter.resolve(expr, i);
             }
         }
     }
 
-    fn resolve_function(&mut self, params: Vec<Token>, body: Vec<Stmt>, function_type: FunctionType) {
+    fn resolve_function(
+        &mut self,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+        function_type: FunctionType,
+    ) {
         let enclosing_function = self.current_function.clone();
         self.current_function = function_type;
         self.begin_scope();
@@ -245,7 +262,7 @@ impl Resolver {
             self.declare(param.clone());
             self.define(param.clone());
         }
-        self.resolve(body);
+        self.resolve(body.clone().into_iter().map(Some).collect());
         self.end_scope();
         self.current_function = enclosing_function;
     }

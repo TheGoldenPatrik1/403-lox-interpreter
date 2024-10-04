@@ -8,23 +8,28 @@ use crate::token::Token;
 use crate::token_type::TokenType;
 use crate::value::Value;
 use crate::write_output::write_output;
+
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::collections::HashMap;
 
+#[derive(Debug, Clone)]
 pub struct Interpreter {
     pub environment: Rc<RefCell<Environment>>,
+    pub globals: Rc<RefCell<Environment>>,
     output_file: String,
+    locals: HashMap<Expr, usize>,
 }
 
 pub trait Visitor {
-    fn visit_assign_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
-    fn visit_literal_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
-    fn visit_grouping_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
-    fn visit_unary_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
-    fn visit_binary_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
-    fn visit_call_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
-    fn visit_variable_expr(&self, expr: &crate::expr::Expr) -> Option<Value>;
-    fn visit_logical_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value>;
+    fn visit_assign_expr(&mut self, expr: &Expr) -> Option<Value>;
+    fn visit_literal_expr(&mut self, expr: &Expr) -> Option<Value>;
+    fn visit_grouping_expr(&mut self, expr: &Expr) -> Option<Value>;
+    fn visit_unary_expr(&mut self, expr: &Expr) -> Option<Value>;
+    fn visit_binary_expr(&mut self, expr: &Expr) -> Option<Value>;
+    fn visit_call_expr(&mut self, expr: &Expr) -> Option<Value>;
+    fn visit_variable_expr(&mut self, expr: &Expr) -> Option<Value>;
+    fn visit_logical_expr(&mut self, expr: &Expr) -> Option<Value>;
 }
 
 pub trait StmtVisitor {
@@ -50,7 +55,7 @@ pub trait StmtVisitor {
 }
 
 impl Visitor for Interpreter {
-    fn visit_assign_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value> {
+    fn visit_assign_expr(&mut self, expr: &Expr) -> Option<Value> {
         if let Expr::Assign { name, value } = expr {
             let v = self.evaluate(&value);
             self.environment
@@ -61,8 +66,8 @@ impl Visitor for Interpreter {
         None
     }
 
-    fn visit_literal_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value> {
-        if let crate::expr::Expr::Literal { value } = expr {
+    fn visit_literal_expr(&mut self, expr: &Expr) -> Option<Value> {
+        if let Expr::Literal { value } = expr {
             match value.type_ {
                 TokenType::Number => {
                     let num = value.lexeme.parse::<f64>().unwrap();
@@ -71,6 +76,7 @@ impl Visitor for Interpreter {
                 TokenType::String => Some(Value::String(value.lexeme.clone())),
                 TokenType::True => Some(Value::Boolean(true)),
                 TokenType::False => Some(Value::Boolean(false)),
+                TokenType::Nil => Some(Value::Nil()),
                 _ => None,
             }
         } else {
@@ -78,8 +84,8 @@ impl Visitor for Interpreter {
         }
     }
 
-    fn visit_grouping_expr(&mut self, expr: &crate::expr::Expr) -> Option<Value> {
-        if let crate::expr::Expr::Grouping { expression } = expr {
+    fn visit_grouping_expr(&mut self, expr: &Expr) -> Option<Value> {
+        if let Expr::Grouping { expression } = expr {
             self.evaluate(&expression.clone()) // Assuming evaluate returns a String
         } else {
             panic!("Expected a Grouping expression.");
@@ -234,11 +240,12 @@ impl Visitor for Interpreter {
         }
     }
 
-    fn visit_variable_expr(&self, expr: &Expr) -> Option<Value> {
+    fn visit_variable_expr(&mut self, expr: &Expr) -> Option<Value> {
         if let Expr::Variable { name } = expr {
-            return Some(self.environment.borrow_mut().get(name));
+            self.lookup_variable(name, expr)
+        } else {
+            None
         }
-        None
     }
 
     fn visit_logical_expr(&mut self, expr: &Expr) -> Option<Value> {
@@ -328,6 +335,7 @@ impl StmtVisitor for Interpreter {
         self.environment
             .borrow_mut()
             .define(name.lexeme.clone(), value);
+
         None
     }
 
@@ -356,9 +364,20 @@ impl StmtVisitor for Interpreter {
 
 impl Interpreter {
     pub fn new(output_file: &str) -> Self {
+        let globals = Rc::new(RefCell::new(Environment::new(None)));
+        globals.borrow_mut().define("clock".to_string(), Some(Value::Callable(Box::new(LoxFunction::new(
+            Stmt::Function {
+                name: Token::new(TokenType::Identifier, "clock".to_string(), None, 0),
+                params: vec![],
+                body: vec![],
+            },
+            Rc::new(RefCell::new(Environment::new(None))),
+        )))));
         Interpreter {
-            environment: Rc::new(RefCell::new(Environment::new(None))),
+            environment: globals.clone(),
+            globals,
             output_file: output_file.to_string(),
+            locals: HashMap::new(),
         }
     }
 
@@ -370,13 +389,17 @@ impl Interpreter {
         stmt.clone().expect("REASON").accept(self)
     }
 
+    pub fn resolve(&mut self, expr: &Expr, depth: usize) {
+        self.locals.insert(expr.clone(), depth);
+    }
+
     pub fn execute_block(
         &mut self,
         statements: &[Stmt],
         environment: Rc<RefCell<Environment>>,
     ) -> Option<ReturnValue> {
         // Store the current environment
-        let previous = std::mem::replace(&mut self.environment, environment.clone());
+        let _previous = std::mem::replace(&mut self.environment, environment.clone());
 
         // Execute statements in the new environment
         for statement in statements {
@@ -514,8 +537,18 @@ impl Interpreter {
                 // Value::Operator(o) => (o.to_string()),
                 Value::String(s) => s.to_string(), // Handle other cases as needed
                 Value::Callable(c) => c.to_string(),
+                Value::Nil() => "nil".to_string(),
             },
             None => "nil".to_string(),
+        }
+    }
+
+    fn lookup_variable(&mut self, name: &Token, expr: &Expr) -> Option<Value> {
+        let distance = self.locals.get(expr);
+        if let Some(distance) = distance {
+            return Some(self.environment.borrow().get_at(*distance, name));
+        } else {
+            return Some(self.environment.borrow().get(name));
         }
     }
 }

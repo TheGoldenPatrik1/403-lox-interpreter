@@ -37,6 +37,19 @@ impl Environment {
         return Value::String("".to_string());
     }
 
+    pub fn get_at(&self, distance: usize, name: &Token) -> Value {
+        self.ancestor(distance).borrow().get(name)
+    }
+
+    pub fn ancestor(&self, distance: usize) -> Rc<RefCell<Environment>> {
+        let mut environment = self.enclosing.clone().unwrap();
+        for _ in 0..distance {
+            let next_environment = environment.borrow().enclosing.clone().unwrap();
+            environment = next_environment;
+        }
+        environment
+    }
+
     pub fn assign(&mut self, name: Token, value: Value) {
         // println!("assign");
         // println!("{:?}", self.values);

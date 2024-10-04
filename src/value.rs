@@ -7,6 +7,7 @@ pub enum Value {
     Number(f64),
     String(String),
     Callable(Box<dyn Callable>),
+    Nil(),
     // Operator(Token),
 }
 
@@ -17,7 +18,8 @@ impl PartialEq for Value {
             (Value::Boolean(a), Value::Boolean(b)) => a == b,
             (Value::String(a), Value::String(b)) => a == b,
             // You can handle Callable equality in a meaningful way if needed, e.g. by pointer comparison or skipping
-            (Value::Callable(_), Value::Callable(_)) => false,  // Callables are not compared
+            (Value::Callable(_), Value::Callable(_)) => false, // Callables are not compared
+            (Value::Nil(), Value::Nil()) => true,
             _ => false,
         }
     }
@@ -31,7 +33,8 @@ impl PartialOrd for Value {
             (Value::Boolean(a), Value::Boolean(b)) => a.partial_cmp(b),
             (Value::String(a), Value::String(b)) => a.partial_cmp(b),
             // Skipping Callables for ordering
-            (Value::Callable(_), Value::Callable(_)) => None,  // Callables cannot be compared
+            (Value::Callable(_), Value::Callable(_)) => None, // Callables cannot be compared
+            (Value::Nil(), Value::Nil()) => Some(std::cmp::Ordering::Equal),
             _ => None,
         }
     }

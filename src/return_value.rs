@@ -1,5 +1,6 @@
 use crate::value::Value;
 
+#[derive(Debug)]
 pub struct ReturnValue {
     pub value: Value,
 }
