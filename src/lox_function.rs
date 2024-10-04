@@ -28,6 +28,26 @@ impl LoxFunction {
             _ => panic!("Expected Stmt::Function, got {:?}", declaration),
         }
     }
+
+    fn sync_closure_with_interpreter_env(
+        closure: Rc<RefCell<Environment>>,
+        interpreter_env: Rc<RefCell<Environment>>,
+    ) {
+        // Borrow both the closure environment and the interpreter environment
+        let closure_env = closure.borrow();
+        let mut interpreter_env_mut = interpreter_env.borrow_mut();
+
+        // Iterate over the closure's environment variables
+        for (key, value) in closure_env.values.iter() {
+            // Check if the variable exists in the interpreter's environment
+            if !interpreter_env_mut.values.contains_key(key) {
+                // If it does not exist, insert it into the interpreter's environment
+                interpreter_env_mut
+                    .values
+                    .insert(key.clone(), value.clone());
+            }
+        }
+    }
 }
 
 impl Callable for LoxFunction {
@@ -69,6 +89,10 @@ impl Callable for LoxFunction {
             } => {
                 // println!("CLOSURE {:?}", interpreter.environment);
                 // Create a new environment for the function call, using the closure as the enclosing scope
+                LoxFunction::sync_closure_with_interpreter_env(
+                    self.closure.clone(),
+                    interpreter.environment.clone(),
+                );
                 let env = Rc::new(RefCell::new(Environment::new(Some(
                     interpreter.environment.clone(),
                 ))));
