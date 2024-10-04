@@ -69,11 +69,11 @@ impl Callable for LoxFunction {
             } => {
                 // println!("CLOSURE {:?}", interpreter.environment);
                 // Create a new environment for the function call, using the closure as the enclosing scope
-                // let env = Rc::new(RefCell::new(Environment::new(Some(
-                //     interpreter.environment.clone(),
-                // ))));
+                let env = Rc::new(RefCell::new(Environment::new(Some(
+                    interpreter.environment.clone(),
+                ))));
                 // alt
-                let env = Rc::new(RefCell::new(Environment::new(Some(self.closure.clone()))));
+                // let env = Rc::new(RefCell::new(Environment::new(Some(self.closure.clone()))));
                 // println!("HERE {:?}", env);
 
                 // Define the parameters in the new environment
