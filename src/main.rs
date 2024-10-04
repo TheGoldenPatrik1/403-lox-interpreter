@@ -141,11 +141,14 @@ mod tests {
 
     enum Success { Standard }
 
-    fn run_test(test_num: i32) -> Result<Success, String> {
+    fn run_test(test_name: &str) -> Result<Success, String> {
         // Define file names
-        let test_src = format!("./tests/test{}.lox", test_num);
-        let test_output = format!("./output/actual/test{}.txt", test_num);
-        let test_comparison = format!("./output/expected/test{}.txt", test_num);
+        let test_src = format!("./tests/{}.lox", test_name);
+        let test_output = format!("./output/actual/{}.txt", test_name);
+        let test_comparison = format!("./output/expected/{}.txt", test_name);
+
+        // Clear the output file
+        File::create(&test_output).map_err(|_| "Failed to clear output file")?;
 
         // Run the test
         run_file(&test_src, &test_output);
@@ -153,6 +156,20 @@ mod tests {
         // Open the files
         let output_file = File::open(&test_output).map_err(|_| "Failed to open output file")?;
         let expected_file = File::open(&test_comparison).map_err(|_| "Failed to open expected file")?;
+
+        // Compare number of lines in the files (by re-opening the files)
+        let output_line_count = BufReader::new(File::open(&test_output).map_err(|_| "Failed to open output file")?)
+            .lines().count();
+        let expected_line_count = BufReader::new(File::open(&test_comparison).map_err(|_| "Failed to open expected file")?)
+            .lines().count();
+
+        if output_line_count != expected_line_count {
+            let err_str = format!(
+                "Test {} failed: actual and expected files have different numbers of lines.\nActual: {}\nExpected: {}",
+                test_name, output_line_count, expected_line_count
+            );
+            return Err(err_str);
+        }
 
         // Create buffered readers for the files
         let output_reader = BufReader::new(output_file);
@@ -165,8 +182,8 @@ mod tests {
             
             if output_line != expected_line {
                 let err_str = format!(
-                    "Test {} failed: output and expected files differ.\nOutput: '{}'\nExpected: '{}'",
-                    test_num, output_line, expected_line
+                    "Test {} failed: actual and expected values differ.\nActual: '{}'\nExpected: '{}'",
+                    test_name, output_line, expected_line
                 );
                 return Err(err_str);
             }
@@ -176,10 +193,26 @@ mod tests {
     }
 
     #[test]
-    fn test1() {
-        match run_test(1) {
+    fn assignment_associativity() {
+        match run_test("assignment_associativity") {
             Ok(_) => assert!(true),
             Err(err) => assert!(false, "{}", err),
         }
+    }
+
+    #[test]
+    fn assignment_global() {
+        match run_test("assignment_global") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn assignment_grouping() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("assignment_grouping")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
     }
 }

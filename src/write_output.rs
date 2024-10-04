@@ -1,5 +1,5 @@
 use std::io;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{Write};
 
 pub fn write_output(file_name: &str, message: &str) -> io::Result<()> {
@@ -9,7 +9,11 @@ pub fn write_output(file_name: &str, message: &str) -> io::Result<()> {
         let mut handle = stdout.lock();  // Lock stdout for writing
         writeln!(handle, "{}", message)?;  // Write the message to stdout
     } else {
-        let file = File::create(file_name)?;  // Create or overwrite the file
+        // Open the file in append mode, creating it if it doesn't exist
+        let file = OpenOptions::new()
+            .append(true)  // Enable append mode
+            .create(true)  // Create the file if it doesn't exist
+            .open(file_name)?;  // Open the file
         let mut handle = file;  // Use the file handle
         writeln!(handle, "{}", message)?;  // Write the message to the file
     }

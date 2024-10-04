@@ -9,6 +9,8 @@ This is a basic interpreter for the [Lox](https://craftinginterpreters.com/the-l
 
 ## Testing
 
+Tests are sourced from the [test folder](https://github.com/munificent/craftinginterpreters/tree/master/test) of the GitHub Repository for the Crafting Interpreters textbook.
+
 ### Testing Plan
 
 1. The `/tests` directory contains `.lox` files which our test harness executes.
@@ -19,3 +21,7 @@ This is a basic interpreter for the [Lox](https://craftinginterpreters.com/the-l
 
 1. Install [Rustup](https://www.rust-lang.org/learn/get-started), which includes Rust and Cargo, if you have not already done so.
 2. Execute `cargo test`.
+
+### Steps to Extract Expected Test Values
+
+1. Execute `python scripts/extract_tests.py`.
