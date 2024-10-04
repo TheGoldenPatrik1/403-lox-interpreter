@@ -1,6 +1,7 @@
 use crate::environment::Environment;
 use crate::expr::Expr;
 use crate::lox_function::LoxFunction;
+use crate::native_functions;
 use crate::return_value::ReturnValue;
 use crate::runtime_error::RuntimeError;
 use crate::stmt::Stmt;
@@ -10,8 +11,8 @@ use crate::value::Value;
 use crate::write_output::write_output;
 
 use std::cell::RefCell;
-use std::rc::Rc;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct Interpreter {
@@ -58,9 +59,14 @@ impl Visitor for Interpreter {
     fn visit_assign_expr(&mut self, expr: &Expr) -> Option<Value> {
         if let Expr::Assign { name, value } = expr {
             let v = self.evaluate(&value);
-            self.environment
-                .borrow_mut()
-                .assign(name.clone(), v.clone()?);
+            let distance = self.locals.get(expr);
+            if let Some(distance) = distance {
+                self.environment
+                    .borrow_mut()
+                    .assign_at(*distance, name.clone(), v.clone()?);
+            } else {
+                self.globals.borrow_mut().assign(name.clone(), v.clone()?);
+            }
             return v;
         }
         None
@@ -144,7 +150,6 @@ impl Visitor for Interpreter {
                         crate::runtime_error(error);
                         return None;
                     }
-                    // println!("INTERP ENVIRONMENT {:?}", self.environment);
                     let ret = Some(callable.call(self, args)?);
                     return ret;
                 }
@@ -276,7 +281,6 @@ impl StmtVisitor for Interpreter {
         let new_environment = Rc::new(RefCell::new(Environment::new(Some(Rc::new(RefCell::new(
             self.environment.borrow_mut().clone(),
         ))))));
-        // println!("NEW ENVIRONMENT {:?}", new_environment);
         self.execute_block(&stmts, new_environment)
     }
 
@@ -365,14 +369,10 @@ impl StmtVisitor for Interpreter {
 impl Interpreter {
     pub fn new(output_file: &str) -> Self {
         let globals = Rc::new(RefCell::new(Environment::new(None)));
-        globals.borrow_mut().define("clock".to_string(), Some(Value::Callable(Box::new(LoxFunction::new(
-            Stmt::Function {
-                name: Token::new(TokenType::Identifier, "clock".to_string(), None, 0),
-                params: vec![],
-                body: vec![],
-            },
-            Rc::new(RefCell::new(Environment::new(None))),
-        )))));
+        globals.borrow_mut().define(
+            "clock".to_string(),
+            Some(Value::Callable(Box::new(native_functions::Clock))),
+        );
         Interpreter {
             environment: globals.clone(),
             globals,
@@ -423,12 +423,9 @@ impl Interpreter {
     pub fn execute_function_block(
         &mut self,
         statements: &[Stmt],
-        // environment: &mut Environment,
         environment: Rc<RefCell<Environment>>,
     ) -> Option<ReturnValue> {
-        // println!("EXECUTE {:?}", environment);
         let previous = std::mem::replace(&mut self.environment, environment.clone());
-        // println!("");
 
         for statement in statements {
             let result = self.execute(Some(statement.clone()));

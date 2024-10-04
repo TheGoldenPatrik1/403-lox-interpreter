@@ -1,1 +1,3 @@
-clock();
+print clock;
+var clock = 1;
+print clock;

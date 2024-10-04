@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::env;
 use std::fs::File;
 use std::io;
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::Path;
 
 mod ast_printer;
@@ -11,6 +11,7 @@ mod environment;
 mod expr;
 mod interpreter;
 mod lox_function;
+mod native_functions;
 mod parser;
 mod resolver;
 mod return_value;

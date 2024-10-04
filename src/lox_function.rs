@@ -51,35 +51,6 @@ impl LoxFunction {
 }
 
 impl Callable for LoxFunction {
-    // fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Option<Value>>) -> Option<Value> {
-    //     match &self.declaration {
-    //         Stmt::Function {
-    //             name: _,
-    //             params,
-    //             body,
-    //         } => {
-    //             // let mut env = self.closure.clone(); // Environment::new(Some(Rc::new(RefCell::new(self.closure.clone()))));
-    //             // let mut env = interpreter.environment.clone();
-    //             let mut env = Environment::new(Some(self.closure.clone()));
-    //             for (i, param) in params.iter().enumerate() {
-    //                 // println!(
-    //                 //     "Checking parameter {:?}",
-    //                 //     Some(arguments[i].clone().unwrap())
-    //                 // );
-    //                 self.closure
-    //                     .borrow_mut()
-    //                     .define(param.lexeme.clone(), Some(arguments[i].clone().unwrap()));
-    //             }
-
-    //             match interpreter.execute_function_block(&body, &mut env) {
-    //                 Some(ReturnValue { value }) => Some(value),
-    //                 None => None,
-    //             }
-    //         }
-    //         _ => panic!("Expected Stmt::Function, got {:?}", self.declaration),
-    //     }
-    // }
-
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Option<Value>>) -> Option<Value> {
         match &self.declaration {
             Stmt::Function {
@@ -87,7 +58,6 @@ impl Callable for LoxFunction {
                 params,
                 body,
             } => {
-                // println!("CLOSURE {:?}", interpreter.environment);
                 // Create a new environment for the function call, using the closure as the enclosing scope
                 LoxFunction::sync_closure_with_interpreter_env(
                     self.closure.clone(),
@@ -96,9 +66,6 @@ impl Callable for LoxFunction {
                 let env = Rc::new(RefCell::new(Environment::new(Some(
                     interpreter.environment.clone(),
                 ))));
-                // alt
-                // let env = Rc::new(RefCell::new(Environment::new(Some(self.closure.clone()))));
-                // println!("HERE {:?}", env);
 
                 // Define the parameters in the new environment
                 for (i, param) in params.iter().enumerate() {
