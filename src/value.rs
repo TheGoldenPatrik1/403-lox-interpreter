@@ -1,5 +1,8 @@
 // use crate::token::Token;
 use crate::callable::Callable;
+use crate::lox_instance::LoxInstance;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -7,6 +10,7 @@ pub enum Value {
     Number(f64),
     String(String),
     Callable(Box<dyn Callable>),
+    Instance(Rc<RefCell<LoxInstance>>),
     Nil(),
     // Operator(Token),
 }
@@ -19,6 +23,7 @@ impl PartialEq for Value {
             (Value::String(a), Value::String(b)) => a == b,
             // You can handle Callable equality in a meaningful way if needed, e.g. by pointer comparison or skipping
             (Value::Callable(_), Value::Callable(_)) => false, // Callables are not compared
+            (Value::Instance(_), Value::Instance(_)) => false,
             (Value::Nil(), Value::Nil()) => true,
             _ => false,
         }
@@ -34,6 +39,7 @@ impl PartialOrd for Value {
             (Value::String(a), Value::String(b)) => a.partial_cmp(b),
             // Skipping Callables for ordering
             (Value::Callable(_), Value::Callable(_)) => None, // Callables cannot be compared
+            (Value::Instance(_), Value::Instance(_)) => None,
             (Value::Nil(), Value::Nil()) => Some(std::cmp::Ordering::Equal),
             _ => None,
         }

@@ -4,8 +4,6 @@ use crate::value::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::thread;
-use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
@@ -22,6 +20,7 @@ impl Environment {
     }
 
     pub fn get(&self, name: &Token) -> Value {
+        // println!("Values {:?}", self.values);
         if let Some(value) = self.values.get(&name.lexeme) {
             return value.clone().expect("REASON"); // Return the value if found
         }
@@ -29,7 +28,7 @@ impl Environment {
         if let Some(enclosing_env) = self.enclosing.as_ref() {
             return enclosing_env.borrow_mut().get(name);
         }
-
+        println!("Doodoo values {:?}", self.values);
         let error = RuntimeError::new(name.clone(), "Variable not found");
         crate::runtime_error(error); // Return None or handle type error appropriately
 
@@ -50,6 +49,7 @@ impl Environment {
     }
 
     pub fn assign(&mut self, name: Token, value: Value) {
+        println!("Entering Assign {:?}", name);
         if self.values.contains_key(&name.lexeme) {
             // Assign the value in the current environment
             self.values.insert(name.lexeme.clone(), Some(value.clone()));
@@ -70,10 +70,16 @@ impl Environment {
     }
 
     pub fn assign_at(&mut self, distance: usize, name: Token, value: Value) {
+        println!(
+            "Entering assign at with distance: {} name: {:?} value {:?}",
+            distance, name, value
+        );
         self.ancestor(distance).borrow_mut().assign(name, value);
     }
 
     pub fn define(&mut self, name: String, value: Option<Value>) {
+        // println!("Definition {:?} value {:?}", name, value);
         self.values.insert(name.clone(), value);
+        // println!("These my boys {:?}", self.values);
     }
 }

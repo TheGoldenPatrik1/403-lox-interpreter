@@ -31,6 +31,9 @@ impl Parser {
         if self.match_tokens(vec![TokenType::Var]) {
             return Some(self.var_declaration());
         }
+        if self.match_tokens(vec![TokenType::Class]) {
+            return Some(self.class_declaration());
+        }
         if self.match_tokens(vec![TokenType::Fun]) {
             return Some(self.function("function"));
         }
@@ -41,6 +44,24 @@ impl Parser {
                 self.synchronize();
                 panic!("Parse Error.")
             }
+        }
+    }
+
+    fn class_declaration(&mut self) -> Stmt {
+        let name = self.consume(TokenType::Identifier, "Expect class name.");
+        self.consume(TokenType::LeftBrace, "Expect '{' before class body.");
+
+        let mut methods = Vec::new();
+        while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+            methods.push(self.function("method"));
+        }
+
+        self.consume(TokenType::RightBrace, "Expect '}' after class body.");
+
+        Stmt::Class {
+            name,
+            superclass: None,
+            methods,
         }
     }
 
@@ -190,10 +211,11 @@ impl Parser {
     fn expression_statement(&mut self) -> Stmt {
         let value = self.expression();
         self.consume(TokenType::Semicolon, "Expect ';' after value.");
-        Stmt::Var {
-            name: Token::new(TokenType::Identifier, "temp".to_string(), None, 0),
-            initializer: Some(value),
-        }
+        // Stmt::Var {
+        //     name: Token::new(TokenType::Identifier, "temp".to_string(), None, 0),
+        //     initializer: Some(value),
+        // }
+        return Stmt::Expression(value);
     }
 
     fn function(&mut self, kind: &str) -> Stmt {
@@ -244,6 +266,13 @@ impl Parser {
             // Check if the expression is a variable expression
             if let Expr::Variable { name } = expr {
                 return Expr::Assign {
+                    name,
+                    value: Box::new(value),
+                };
+            } else if let Expr::Get { object, name } = expr {
+                println!("tryna make a set");
+                return Expr::Set {
+                    object,
                     name,
                     value: Box::new(value),
                 };
@@ -401,6 +430,12 @@ impl Parser {
         loop {
             if self.match_tokens(vec![TokenType::LeftParen]) {
                 expr = self.finish_call(expr);
+            } else if self.match_tokens(vec![TokenType::Dot]) {
+                let name = self.consume(TokenType::Identifier, "Expect property name after '.'.");
+                expr = Expr::Get {
+                    object: Box::new(expr),
+                    name,
+                };
             } else {
                 break;
             }
@@ -448,6 +483,11 @@ impl Parser {
         if self.match_tokens(vec![TokenType::Number, TokenType::String]) {
             return Expr::Literal {
                 value: self.previous().clone(),
+            };
+        }
+        if self.match_tokens(vec![TokenType::This]) {
+            return Expr::This {
+                keyword: self.previous().clone(),
             };
         }
         if self.match_tokens(vec![TokenType::Identifier]) {

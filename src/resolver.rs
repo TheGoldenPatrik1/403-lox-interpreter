@@ -15,6 +15,7 @@ use std::collections::HashMap;
 pub enum FunctionType {
     None,
     Function,
+    Method,
 }
 
 pub struct Resolver {
@@ -85,6 +86,14 @@ impl Visitor for Resolver {
         None
     }
 
+    fn visit_get_expr(&mut self, expr: &Expr) -> Option<Value> {
+        if let Expr::Get { object, name: _ } = expr {
+            self.resolve_expr(object);
+            return None;
+        }
+        None
+    }
+
     fn visit_variable_expr(&mut self, expr: &Expr) -> Option<Value> {
         if !self.scopes.is_empty() {
             let scope = self.scopes.last().unwrap();
@@ -113,6 +122,35 @@ impl Visitor for Resolver {
         }
         None
     }
+
+    fn visit_set_expr(&mut self, expr: &Expr) -> Option<Value> {
+        println!("made it here");
+        match expr {
+            Expr::Set {
+                object,
+                name: _,
+                value,
+            } => {
+                println!("object {:?} value {:?}", object, value);
+                self.resolve_expr(object);
+                self.resolve_expr(value);
+                return None;
+            }
+            _ => {}
+        }
+        None
+    }
+
+    fn visit_this_expr(&mut self, expr: &Expr) -> Option<Value> {
+        match expr {
+            Expr::This { keyword } => {
+                self.resolve_local(expr, keyword);
+                return None;
+            }
+            _ => {}
+        }
+        None
+    }
 }
 
 impl StmtVisitor for Resolver {
@@ -123,8 +161,35 @@ impl StmtVisitor for Resolver {
         result
     }
 
-    // fn visit_class_stmt(&mut self, stmt: &Class) -> Option<ReturnValue> {
-    // }
+    fn visit_class_stmt(
+        &mut self,
+        name: Token,
+        _superclass: Option<Expr>,
+        methods: Vec<Stmt>,
+    ) -> Option<ReturnValue> {
+        self.declare(name.clone());
+        self.define(name.clone());
+
+        self.begin_scope();
+        if let Some(current_scope) = self.scopes.last_mut() {
+            current_scope.insert("this".to_string(), true);
+        }
+
+        for method in &methods {
+            match method {
+                Stmt::Function {
+                    name: _,
+                    params,
+                    body,
+                } => {
+                    self.resolve_function(params.to_vec(), body.to_vec(), FunctionType::Method);
+                }
+                _ => {}
+            }
+        }
+        self.end_scope();
+        None
+    }
 
     fn visit_expression_stmt(&mut self, expr: Expr) -> Option<ReturnValue> {
         self.resolve_expr(&Box::new(expr));

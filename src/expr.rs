@@ -19,6 +19,11 @@ pub enum Expr {
     Literal {
         value: Token,
     },
+    Set {
+        object: Box<Expr>,
+        name: Token,
+        value: Box<Expr>,
+    },
     Unary {
         operator: Token,
         right: Box<Expr>,
@@ -36,6 +41,13 @@ pub enum Expr {
         paren: Token,
         arguments: Vec<Expr>,
     },
+    Get {
+        object: Box<Expr>,
+        name: Token,
+    },
+    This {
+        keyword: Token,
+    },
 }
 
 impl Expr {
@@ -49,6 +61,11 @@ impl Expr {
             } => self.parenthesize(&operator.lexeme, vec![left, right]),
             Expr::Grouping { expression } => self.parenthesize("group", vec![expression]),
             Expr::Literal { value } => value.to_string(),
+            Expr::Set {
+                object,
+                name,
+                value,
+            } => self.parenthesize(&name.lexeme, vec![object, value]),
             Expr::Unary { operator, right } => self.parenthesize(&operator.lexeme, vec![right]),
             Expr::Variable { name } => name.to_string(),
             Expr::Logical {
@@ -61,6 +78,8 @@ impl Expr {
                 paren,
                 arguments: _,
             } => self.parenthesize(&paren.lexeme, vec![]),
+            Expr::Get { object, name } => self.parenthesize(&name.lexeme, vec![object]),
+            Expr::This { keyword } => keyword.to_string(),
         }
     }
 
@@ -89,6 +108,13 @@ impl Expr {
                 paren: _,
                 arguments: _,
             } => visitor.visit_call_expr(self),
+            Expr::Get { object: _, name: _ } => visitor.visit_get_expr(self),
+            Expr::Set {
+                object: _,
+                name: _,
+                value: _,
+            } => visitor.visit_set_expr(self),
+            Expr::This { keyword: _ } => visitor.visit_this_expr(self),
         }
     }
 

@@ -6,7 +6,11 @@ use crate::token::Token;
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Block(Vec<Stmt>),
-    // Class(Class),
+    Class {
+        name: Token,
+        superclass: Option<Expr>,
+        methods: Vec<Stmt>,
+    },
     Expression(Expr),
     Function {
         name: Token,
@@ -37,7 +41,11 @@ impl Stmt {
     pub fn accept(&self, visitor: &mut impl StmtVisitor) -> Option<ReturnValue> {
         match self {
             Stmt::Block(block) => visitor.visit_block_stmt(block.clone()),
-            // Stmt::Class(class) => visitor.visit_class_stmt(class),
+            Stmt::Class {
+                name,
+                superclass,
+                methods,
+            } => visitor.visit_class_stmt(name.clone(), superclass.clone(), methods.clone()),
             Stmt::Expression(expr) => visitor.visit_expression_stmt(expr.clone()),
             Stmt::Function { name, params, body } => {
                 visitor.visit_function_stmt(name.clone(), params.clone(), body.clone())

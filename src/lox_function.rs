@@ -1,12 +1,14 @@
 use crate::callable::Callable;
 use crate::environment::Environment;
 use crate::interpreter::Interpreter;
+use crate::lox_instance::LoxInstance;
 use crate::return_value::ReturnValue;
 use crate::stmt::Stmt;
 use crate::value::Value;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+#[derive(Debug, Clone)]
 pub struct LoxFunction {
     pub arity: usize,
     pub declaration: Stmt,
@@ -29,12 +31,35 @@ impl LoxFunction {
         }
     }
 
+    pub fn bind(&self, instance: LoxInstance) -> Option<Value> {
+        // println!("bind environment {:?}", self.environment);
+        println!("bind closure {:?}", self.closure);
+        let mut environment = Environment::new(Some(self.closure.clone()));
+        environment.define(
+            "this".to_string(),
+            Some(Value::Instance(Rc::new(RefCell::new(instance)))),
+        );
+
+        let function = Value::Callable(Box::new(LoxFunction::new(
+            self.declaration.clone(),
+            Rc::new(RefCell::new(environment.clone())),
+        )));
+
+        return Some(function);
+
+        // Value::Callable(())LoxFunction {
+        //     arity: self.arity,
+        //     declaration: self.declaration.clone(),
+        //     closure: Rc::new(RefCell::new(environment)),
+        // }
+    }
+
     fn sync_closure_with_interpreter_env(
         closure: Rc<RefCell<Environment>>,
         interpreter_env: Rc<RefCell<Environment>>,
     ) {
         // Borrow both the closure environment and the interpreter environment
-        let closure_env = closure.borrow_mut();
+        let closure_env = closure.borrow();
         let mut interpreter_env_mut = interpreter_env.borrow_mut();
 
         // Iterate over the closure's environment variables
@@ -59,10 +84,6 @@ impl Callable for LoxFunction {
                 body,
             } => {
                 // Create a new environment for the function call, using the closure as the enclosing scope
-                LoxFunction::sync_closure_with_interpreter_env(
-                    self.closure.clone(),
-                    interpreter.environment.clone(),
-                );
                 let env = Rc::new(RefCell::new(Environment::new(Some(
                     interpreter.environment.clone(),
                 ))));
@@ -71,6 +92,13 @@ impl Callable for LoxFunction {
                 for (i, param) in params.iter().enumerate() {
                     env.borrow_mut()
                         .define(param.lexeme.clone(), Some(arguments[i].clone().unwrap()));
+                }
+
+                if !Rc::ptr_eq(&self.closure, &interpreter.environment) {
+                    LoxFunction::sync_closure_with_interpreter_env(
+                        self.closure.clone(),
+                        interpreter.environment.clone(),
+                    );
                 }
 
                 // Execute the function block in the new environment

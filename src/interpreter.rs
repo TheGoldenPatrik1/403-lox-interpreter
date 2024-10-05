@@ -1,6 +1,8 @@
 use crate::environment::Environment;
 use crate::expr::Expr;
+use crate::lox_class::LoxClass;
 use crate::lox_function::LoxFunction;
+use crate::lox_instance::LoxInstance;
 use crate::native_functions;
 use crate::return_value::ReturnValue;
 use crate::runtime_error::RuntimeError;
@@ -31,13 +33,21 @@ pub trait Visitor {
     fn visit_unary_expr(&mut self, expr: &Expr) -> Option<Value>;
     fn visit_binary_expr(&mut self, expr: &Expr) -> Option<Value>;
     fn visit_call_expr(&mut self, expr: &Expr) -> Option<Value>;
+    fn visit_get_expr(&mut self, expr: &Expr) -> Option<Value>;
     fn visit_variable_expr(&mut self, expr: &Expr) -> Option<Value>;
     fn visit_logical_expr(&mut self, expr: &Expr) -> Option<Value>;
+    fn visit_set_expr(&mut self, expr: &Expr) -> Option<Value>;
+    fn visit_this_expr(&mut self, expr: &Expr) -> Option<Value>;
 }
 
 pub trait StmtVisitor {
     fn visit_block_stmt(&mut self, stmts: Vec<Stmt>) -> Option<ReturnValue>;
-    // fn visit_class_stmt(&mut self, stmt: &Class) -> Option<ReturnValue>;
+    fn visit_class_stmt(
+        &mut self,
+        name: Token,
+        superclass: Option<Expr>,
+        methods: Vec<Stmt>,
+    ) -> Option<ReturnValue>;
     fn visit_expression_stmt(&mut self, expr: Expr) -> Option<ReturnValue>;
     fn visit_function_stmt(
         &mut self,
@@ -62,9 +72,11 @@ impl Visitor for Interpreter {
         if let Expr::Assign { name, value } = expr {
             let v = self.evaluate(&value);
             let distance = self.locals.get(expr);
+            println!("");
+            println!("");
+            println!("");
+            println!("The expr is {:?} and this far {:?}", expr, distance);
             if let Some(distance) = distance {
-                // println!("Assign at");
-                // thread::sleep(Duration::from_secs(5));
                 self.environment
                     .borrow_mut()
                     .assign_at(*distance, name.clone(), v.clone()?);
@@ -167,6 +179,32 @@ impl Visitor for Interpreter {
         } else {
             None
         }
+    }
+
+    fn visit_get_expr(&mut self, expr: &Expr) -> Option<Value> {
+        if let Expr::Get { object, name } = expr {
+            // println!("Entering interp visit get {:?}",);
+            // Evaluate the object expression
+            let object_value = self.evaluate(&*object); // Dereference the Box<Expr>
+
+            // Check if the evaluated object is an instance of LoxInstance
+            match object_value {
+                Some(Value::Instance(instance)) => {
+                    // Call the get method on the LoxInstance with the property name
+
+                    return instance.borrow_mut().get(name);
+                }
+                _ => {
+                    // Throw a runtime error if the object is not an instance
+                    let runtime_error =
+                        RuntimeError::new(name.clone(), "Only instances have properties.");
+
+                    // Handle the runtime error, e.g., logging or panicking
+                    crate::runtime_error(runtime_error);
+                }
+            }
+        }
+        None
     }
 
     fn visit_binary_expr(&mut self, expr: &Expr) -> Option<Value> {
@@ -278,6 +316,40 @@ impl Visitor for Interpreter {
         }
         None
     }
+
+    fn visit_set_expr(&mut self, expr: &Expr) -> Option<Value> {
+        if let Expr::Set {
+            object,
+            name,
+            value,
+        } = expr
+        {
+            println!("Entering visit set expr");
+            let object_value = self.evaluate(&*object);
+
+            if let Some(Value::Instance(instance)) = object_value {
+                let value_evaluated = self.evaluate(&*value);
+
+                instance
+                    .borrow_mut()
+                    .set(name.clone(), value_evaluated.clone());
+                return value_evaluated;
+            } else {
+                let error = RuntimeError::new(name.clone(), "Operand must be a number");
+                crate::runtime_error(error);
+                return None;
+            }
+        }
+
+        None
+    }
+
+    fn visit_this_expr(&mut self, expr: &Expr) -> Option<Value> {
+        if let Expr::This { keyword } = expr {
+            return self.lookup_variable(keyword, expr);
+        }
+        None
+    }
 }
 
 impl StmtVisitor for Interpreter {
@@ -285,12 +357,42 @@ impl StmtVisitor for Interpreter {
         let new_environment = Rc::new(RefCell::new(Environment::new(Some(Rc::new(RefCell::new(
             self.environment.borrow_mut().clone(),
         ))))));
-        // println!("Current environment {:?}", self.environment);
-        // println!("New environment {:?}", new_environment);
         self.execute_block(&stmts, new_environment)
     }
 
-    // fn visit_class_stmt(&mut self, stmt: &Class) {}
+    fn visit_class_stmt(
+        &mut self,
+        name: Token,
+        superclass: Option<Expr>,
+        ref methods: Vec<Stmt>,
+    ) -> Option<ReturnValue> {
+        self.environment
+            .borrow_mut()
+            .define(name.lexeme.clone(), None);
+
+        let mut meths: HashMap<String, LoxFunction> = HashMap::new();
+        for method in methods {
+            match method {
+                Stmt::Function { name, params, body } => {
+                    let function = LoxFunction::new(method.clone(), self.environment.clone());
+                    meths.insert(name.lexeme.clone(), function);
+                }
+                _ => {}
+            }
+        }
+        let klass = Value::Callable(Box::new(LoxClass::new(
+            meths,
+            Stmt::Class {
+                name: name.clone(),
+                superclass: superclass.clone(),
+                methods: methods.clone(),
+            },
+            Rc::new(RefCell::new(self.environment.borrow_mut().clone())),
+        )));
+        println!("Where are we assigning at brother");
+        self.environment.borrow_mut().assign(name, klass);
+        None
+    }
 
     fn visit_function_stmt(
         &mut self,
@@ -306,7 +408,6 @@ impl StmtVisitor for Interpreter {
             },
             Rc::new(RefCell::new(self.environment.borrow_mut().clone())),
         )));
-        // println!("CHECK THIS {:?}", self.environment.borrow_mut().clone());
         self.environment
             .borrow_mut()
             .define(name.lexeme.clone(), Some(function));
@@ -341,7 +442,8 @@ impl StmtVisitor for Interpreter {
         if let Some(init) = initializer {
             value = self.evaluate(&init);
         }
-
+        // println!("Visit var stmt envr {:?}", self.environment);
+        // thread::sleep(Duration::from_secs(5));
         // Define the variable in the environment
         self.environment
             .borrow_mut()
@@ -400,9 +502,7 @@ impl Interpreter {
     }
 
     pub fn resolve(&mut self, expr: &Expr, depth: usize) {
-        // println!("Added {:?} to scope level {}", expr, depth);
         self.locals.insert(expr.clone(), depth);
-        // println!("Locals after addition {:?}", self.locals);
     }
 
     pub fn execute_block(
@@ -411,8 +511,7 @@ impl Interpreter {
         environment: Rc<RefCell<Environment>>,
     ) -> Option<ReturnValue> {
         // Store the current environment
-        let previous = std::mem::replace(&mut self.environment, environment.clone());
-        // println!("Environment in execute block {:?}", self.environment);
+        let _previous = std::mem::replace(&mut self.environment, environment.clone());
         // Execute statements in the new environment
         for statement in statements {
             let result = self.execute(Some(statement.clone()));
@@ -520,7 +619,7 @@ impl Interpreter {
     }
 
     pub fn interpret(&mut self, statements: Vec<Option<Stmt>>) -> Option<ReturnValue> {
-        // println!("Interpret Locals {:?}", self.locals);
+        println!("Interpret Locals {:?}", self.locals);
         // println!("globals {:?}", self.globals);
         for statement in statements {
             // println!("statement {:?}", statement);
@@ -549,6 +648,7 @@ impl Interpreter {
                 // Value::Operator(o) => (o.to_string()),
                 Value::String(s) => s.to_string(), // Handle other cases as needed
                 Value::Callable(c) => c.to_string(),
+                Value::Instance(i) => i.borrow_mut().to_string(),
                 Value::Nil() => "nil".to_string(),
             },
             None => "nil".to_string(),
@@ -556,12 +656,8 @@ impl Interpreter {
     }
 
     fn lookup_variable(&mut self, name: &Token, expr: &Expr) -> Option<Value> {
-        // println!("lookup {:?}", self.environment);
         let distance = self.locals.get(expr);
-        // println!("distance {:?}", distance);
-        // println!("locals {:?}", self.locals);
         if let Some(distance) = distance {
-            // println!("tryna cheat that shit");
             return Some(self.environment.borrow_mut().get_at(*distance, name));
         } else {
             return Some(self.environment.borrow_mut().get(name));

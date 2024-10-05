@@ -1,4 +1,13 @@
-
-for(var i = 0; i < 5; i = i + 1){
-  print i;
+class Cake {
+  taste() {
+    print "Trying to make var";
+    var adjective = "delicious";
+    print adjective;
+    print "made var";
+    print "The cake is " + this.flavor + " is " + adjective;
+  }
 }
+
+var cake = Cake();
+cake.flavor = "German chocolate";
+cake.taste(); // Prints "The German chocolate cake is delicious!".
