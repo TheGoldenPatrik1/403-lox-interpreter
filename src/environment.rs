@@ -4,6 +4,8 @@ use crate::value::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::thread;
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
@@ -25,7 +27,7 @@ impl Environment {
         }
 
         if let Some(enclosing_env) = self.enclosing.as_ref() {
-            return enclosing_env.borrow().get(name);
+            return enclosing_env.borrow_mut().get(name);
         }
 
         let error = RuntimeError::new(name.clone(), "Variable not found");
@@ -35,11 +37,11 @@ impl Environment {
     }
 
     pub fn get_at(&self, distance: usize, name: &Token) -> Value {
-        self.ancestor(distance).borrow().get(name)
+        self.ancestor(distance).borrow_mut().get(name)
     }
 
     pub fn ancestor(&self, distance: usize) -> Rc<RefCell<Environment>> {
-        let mut environment = self.enclosing.clone().unwrap();
+        let mut environment = Rc::new(RefCell::new(self.clone()));
         for _ in 0..distance {
             let next_environment = environment.borrow().enclosing.clone().unwrap();
             environment = next_environment;

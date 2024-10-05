@@ -13,6 +13,8 @@ use crate::write_output::write_output;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::thread;
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct Interpreter {
@@ -61,6 +63,8 @@ impl Visitor for Interpreter {
             let v = self.evaluate(&value);
             let distance = self.locals.get(expr);
             if let Some(distance) = distance {
+                // println!("Assign at");
+                // thread::sleep(Duration::from_secs(5));
                 self.environment
                     .borrow_mut()
                     .assign_at(*distance, name.clone(), v.clone()?);
@@ -281,6 +285,8 @@ impl StmtVisitor for Interpreter {
         let new_environment = Rc::new(RefCell::new(Environment::new(Some(Rc::new(RefCell::new(
             self.environment.borrow_mut().clone(),
         ))))));
+        // println!("Current environment {:?}", self.environment);
+        // println!("New environment {:?}", new_environment);
         self.execute_block(&stmts, new_environment)
     }
 
@@ -300,6 +306,7 @@ impl StmtVisitor for Interpreter {
             },
             Rc::new(RefCell::new(self.environment.borrow_mut().clone())),
         )));
+        // println!("CHECK THIS {:?}", self.environment.borrow_mut().clone());
         self.environment
             .borrow_mut()
             .define(name.lexeme.clone(), Some(function));
@@ -344,9 +351,11 @@ impl StmtVisitor for Interpreter {
     }
 
     fn visit_while_stmt(&mut self, condition: Expr, body: Box<Stmt>) -> Option<ReturnValue> {
+        let previous_environment = self.environment.clone();
         while Interpreter::is_truthy(self.evaluate(&condition).as_ref()) {
             self.execute(Some(*body.clone()));
         }
+        self.environment = previous_environment;
         None
     }
 
@@ -374,7 +383,7 @@ impl Interpreter {
             Some(Value::Callable(Box::new(native_functions::Clock))),
         );
         Interpreter {
-            environment: globals.clone(),
+            environment: Rc::new(RefCell::new(Environment::new(Some(globals.clone())))),
             globals,
             output_file: output_file.to_string(),
             locals: HashMap::new(),
@@ -386,11 +395,14 @@ impl Interpreter {
     }
 
     fn execute(&mut self, stmt: Option<Stmt>) -> Option<ReturnValue> {
+        // println!("Ennvironment entering accept {:?}", self.environment);
         stmt.clone().expect("REASON").accept(self)
     }
 
     pub fn resolve(&mut self, expr: &Expr, depth: usize) {
+        // println!("Added {:?} to scope level {}", expr, depth);
         self.locals.insert(expr.clone(), depth);
+        // println!("Locals after addition {:?}", self.locals);
     }
 
     pub fn execute_block(
@@ -399,8 +411,8 @@ impl Interpreter {
         environment: Rc<RefCell<Environment>>,
     ) -> Option<ReturnValue> {
         // Store the current environment
-        let _previous = std::mem::replace(&mut self.environment, environment.clone());
-
+        let previous = std::mem::replace(&mut self.environment, environment.clone());
+        // println!("Environment in execute block {:?}", self.environment);
         // Execute statements in the new environment
         for statement in statements {
             let result = self.execute(Some(statement.clone()));
@@ -508,7 +520,10 @@ impl Interpreter {
     }
 
     pub fn interpret(&mut self, statements: Vec<Option<Stmt>>) -> Option<ReturnValue> {
+        // println!("Interpret Locals {:?}", self.locals);
+        // println!("globals {:?}", self.globals);
         for statement in statements {
+            // println!("statement {:?}", statement);
             match self.execute(statement) {
                 Some(ReturnValue { value }) => {
                     return Some(ReturnValue::new(value));
@@ -541,11 +556,15 @@ impl Interpreter {
     }
 
     fn lookup_variable(&mut self, name: &Token, expr: &Expr) -> Option<Value> {
+        // println!("lookup {:?}", self.environment);
         let distance = self.locals.get(expr);
+        // println!("distance {:?}", distance);
+        // println!("locals {:?}", self.locals);
         if let Some(distance) = distance {
-            return Some(self.environment.borrow().get_at(*distance, name));
+            // println!("tryna cheat that shit");
+            return Some(self.environment.borrow_mut().get_at(*distance, name));
         } else {
-            return Some(self.environment.borrow().get(name));
+            return Some(self.environment.borrow_mut().get(name));
         }
     }
 }

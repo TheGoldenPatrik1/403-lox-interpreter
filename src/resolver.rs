@@ -6,6 +6,8 @@ use crate::return_value::ReturnValue;
 use crate::stmt::Stmt;
 use crate::token::Token;
 use crate::value::Value;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use std::collections::HashMap;
 
@@ -16,7 +18,7 @@ pub enum FunctionType {
 }
 
 pub struct Resolver {
-    interpreter: Interpreter,
+    interpreter: Rc<RefCell<Interpreter>>,
     scopes: Vec<HashMap<String, bool>>,
     current_function: FunctionType,
 }
@@ -188,7 +190,7 @@ impl StmtVisitor for Resolver {
 }
 
 impl Resolver {
-    pub fn new(interpreter: Interpreter) -> Resolver {
+    pub fn new(interpreter: Rc<RefCell<Interpreter>>) -> Resolver {
         Resolver {
             interpreter,
             scopes: vec![],
@@ -244,7 +246,8 @@ impl Resolver {
     fn resolve_local(&mut self, expr: &Expr, name: &Token) {
         for (i, scope) in self.scopes.iter().enumerate().rev() {
             if scope.contains_key(&name.lexeme) {
-                self.interpreter.resolve(expr, i);
+                self.interpreter.borrow_mut().resolve(expr, i);
+                return;
             }
         }
     }

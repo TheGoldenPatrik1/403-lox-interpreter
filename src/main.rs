@@ -1,9 +1,11 @@
 use std::cell::Cell;
+use std::cell::RefCell;
 use std::env;
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::Path;
+use std::rc::Rc;
 
 mod ast_printer;
 mod callable;
@@ -108,12 +110,12 @@ fn run(source: &str, output_file: &str) {
         return;
     }
 
-    let mut interp = interpreter::Interpreter::new(output_file);
+    let interp = Rc::new(RefCell::new(interpreter::Interpreter::new(output_file)));
 
     let mut resolver = resolver::Resolver::new(interp.clone());
     resolver.resolve(statements.clone());
 
-    interp.interpret(statements);
+    interp.borrow_mut().interpret(statements);
 }
 
 fn error(line: i32, message: &str) {

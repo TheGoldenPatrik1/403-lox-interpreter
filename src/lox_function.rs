@@ -34,7 +34,7 @@ impl LoxFunction {
         interpreter_env: Rc<RefCell<Environment>>,
     ) {
         // Borrow both the closure environment and the interpreter environment
-        let closure_env = closure.borrow();
+        let closure_env = closure.borrow_mut();
         let mut interpreter_env_mut = interpreter_env.borrow_mut();
 
         // Iterate over the closure's environment variables
