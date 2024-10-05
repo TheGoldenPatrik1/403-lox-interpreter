@@ -124,14 +124,12 @@ impl Visitor for Resolver {
     }
 
     fn visit_set_expr(&mut self, expr: &Expr) -> Option<Value> {
-        println!("made it here");
         match expr {
             Expr::Set {
                 object,
                 name: _,
                 value,
             } => {
-                println!("object {:?} value {:?}", object, value);
                 self.resolve_expr(object);
                 self.resolve_expr(value);
                 return None;

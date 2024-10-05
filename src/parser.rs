@@ -270,7 +270,6 @@ impl Parser {
                     value: Box::new(value),
                 };
             } else if let Expr::Get { object, name } = expr {
-                println!("tryna make a set");
                 return Expr::Set {
                     object,
                     name,
