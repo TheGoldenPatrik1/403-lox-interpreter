@@ -213,8 +213,18 @@ mod tests {
 
     #[test]
     fn assignment_grouping() {
-        let result = std::panic::catch_unwind(|| run_test("assignment", "grouping"));
+        let result = std::panic::catch_unwind(|| {
+            run_test("assignment", "grouping")
+        });
         assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn assignment_syntax() {
+        match run_test("assignment", "syntax") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
     }
 
     #[test]
@@ -226,10 +236,50 @@ mod tests {
     }
 
     #[test]
+    fn assignment_prefix_operator() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("assignment", "prefix_operator")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
     fn assignment_associativity() {
         match run_test("assignment", "associativity") {
             Ok(_) => assert!(true),
             Err(err) => assert!(false, "{}", err),
         }
+    }
+
+    #[test]
+    fn assignment_to_this() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("assignment", "to_this")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn assignment_infix_operator() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("assignment", "infix_operator")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn assignment_local() {
+        match run_test("assignment", "local") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn assignment_undefined() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("assignment", "undefined")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
     }
 }

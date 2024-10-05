@@ -63,6 +63,7 @@ impl Environment {
                 &format!("Undefined variable '{}'", name.lexeme),
             );
             crate::runtime_error(error);
+            panic!("Undefined variable '{}'", name.lexeme);
         }
     }
 
