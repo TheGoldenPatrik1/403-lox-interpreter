@@ -264,12 +264,14 @@ impl Resolver {
     }
 
     pub fn resolve(&mut self, stmts: Vec<Option<Stmt>>) -> Option<ReturnValue> {
+        self.begin_scope();
         for stmt in stmts {
             let ret = self.resolve_stmt(stmt?);
             if ret.is_some() {
                 return ret;
             }
         }
+        self.end_scope();
         None
     }
 
@@ -309,8 +311,11 @@ impl Resolver {
     }
 
     fn resolve_local(&mut self, expr: &Expr, name: &Token) {
+        println!("{:?}", self.scopes);
         for (i, scope) in self.scopes.iter().enumerate().rev() {
+            println!("Hey");
             if scope.contains_key(&name.lexeme) {
+                println!("Check");
                 self.interpreter.borrow_mut().resolve(expr, i);
                 return;
             }

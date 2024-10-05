@@ -1,13 +1,3 @@
-class Cake {
-  taste() {
-    print "Trying to make var";
-    var adjective = "delicious";
-    print adjective;
-    print "made var";
-    print "The cake is " + this.flavor + " is " + adjective;
-  }
+for (var i = 0; i < 20; i = i + 1) {
+  print i;
 }
-
-var cake = Cake();
-cake.flavor = "German chocolate";
-cake.taste(); // Prints "The German chocolate cake is delicious!".

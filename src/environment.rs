@@ -42,7 +42,7 @@ impl Environment {
     pub fn ancestor(&self, distance: usize) -> Rc<RefCell<Environment>> {
         let mut environment = Rc::new(RefCell::new(self.clone()));
         for _ in 0..distance {
-            let next_environment = environment.borrow().enclosing.clone().unwrap();
+            let next_environment = environment.borrow_mut().enclosing.clone().unwrap();
             environment = next_environment;
         }
         environment
@@ -50,9 +50,13 @@ impl Environment {
 
     pub fn assign(&mut self, name: Token, value: Value) {
         println!("Entering Assign {:?}", name);
+        println!("Value {:?}", value);
+        println!("Environment {:?}", self.values);
         if self.values.contains_key(&name.lexeme) {
             // Assign the value in the current environment
             self.values.insert(name.lexeme.clone(), Some(value.clone()));
+            println!("Assigned");
+            println!("{:?}", self.values);
             return;
         }
         if let Some(ref enclosing_env) = self.enclosing {

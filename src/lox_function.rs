@@ -84,6 +84,12 @@ impl Callable for LoxFunction {
                 body,
             } => {
                 // Create a new environment for the function call, using the closure as the enclosing scope
+                if !Rc::ptr_eq(&self.closure, &interpreter.environment) {
+                    LoxFunction::sync_closure_with_interpreter_env(
+                        self.closure.clone(),
+                        interpreter.environment.clone(),
+                    );
+                }
                 let env = Rc::new(RefCell::new(Environment::new(Some(
                     interpreter.environment.clone(),
                 ))));
@@ -92,13 +98,6 @@ impl Callable for LoxFunction {
                 for (i, param) in params.iter().enumerate() {
                     env.borrow_mut()
                         .define(param.lexeme.clone(), Some(arguments[i].clone().unwrap()));
-                }
-
-                if !Rc::ptr_eq(&self.closure, &interpreter.environment) {
-                    LoxFunction::sync_closure_with_interpreter_env(
-                        self.closure.clone(),
-                        interpreter.environment.clone(),
-                    );
                 }
 
                 // Execute the function block in the new environment

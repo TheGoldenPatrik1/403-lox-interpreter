@@ -71,6 +71,7 @@ impl Visitor for Interpreter {
     fn visit_assign_expr(&mut self, expr: &Expr) -> Option<Value> {
         if let Expr::Assign { name, value } = expr {
             let v = self.evaluate(&value);
+            println!("Locals {:?}", self.locals);
             let distance = self.locals.get(expr);
             println!("");
             println!("");
@@ -80,6 +81,7 @@ impl Visitor for Interpreter {
                 self.environment
                     .borrow_mut()
                     .assign_at(*distance, name.clone(), v.clone()?);
+                println!("Yippee {:?}", self.environment);
             } else {
                 self.globals.borrow_mut().assign(name.clone(), v.clone()?);
             }
