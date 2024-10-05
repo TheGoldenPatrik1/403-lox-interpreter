@@ -72,10 +72,6 @@ impl Visitor for Interpreter {
         if let Expr::Assign { name, value } = expr {
             let v = self.evaluate(&value);
             let distance = self.locals.get(expr);
-            println!("");
-            println!("");
-            println!("");
-            println!("The expr is {:?} and this far {:?}", expr, distance);
             if let Some(distance) = distance {
                 self.environment
                     .borrow_mut()
@@ -183,7 +179,6 @@ impl Visitor for Interpreter {
 
     fn visit_get_expr(&mut self, expr: &Expr) -> Option<Value> {
         if let Expr::Get { object, name } = expr {
-            // println!("Entering interp visit get {:?}",);
             // Evaluate the object expression
             let object_value = self.evaluate(&*object); // Dereference the Box<Expr>
 
@@ -324,7 +319,6 @@ impl Visitor for Interpreter {
             value,
         } = expr
         {
-            println!("Entering visit set expr");
             let object_value = self.evaluate(&*object);
 
             if let Some(Value::Instance(instance)) = object_value {
@@ -389,7 +383,6 @@ impl StmtVisitor for Interpreter {
             },
             Rc::new(RefCell::new(self.environment.borrow_mut().clone())),
         )));
-        println!("Where are we assigning at brother");
         self.environment.borrow_mut().assign(name, klass);
         None
     }
@@ -442,8 +435,7 @@ impl StmtVisitor for Interpreter {
         if let Some(init) = initializer {
             value = self.evaluate(&init);
         }
-        // println!("Visit var stmt envr {:?}", self.environment);
-        // thread::sleep(Duration::from_secs(5));
+
         // Define the variable in the environment
         self.environment
             .borrow_mut()
@@ -485,7 +477,7 @@ impl Interpreter {
             Some(Value::Callable(Box::new(native_functions::Clock))),
         );
         Interpreter {
-            environment: Rc::new(RefCell::new(Environment::new(Some(globals.clone())))),
+            environment: globals.clone(),
             globals,
             output_file: output_file.to_string(),
             locals: HashMap::new(),
@@ -497,7 +489,6 @@ impl Interpreter {
     }
 
     fn execute(&mut self, stmt: Option<Stmt>) -> Option<ReturnValue> {
-        // println!("Ennvironment entering accept {:?}", self.environment);
         stmt.clone().expect("REASON").accept(self)
     }
 
@@ -619,10 +610,7 @@ impl Interpreter {
     }
 
     pub fn interpret(&mut self, statements: Vec<Option<Stmt>>) -> Option<ReturnValue> {
-        println!("Interpret Locals {:?}", self.locals);
-        // println!("globals {:?}", self.globals);
         for statement in statements {
-            // println!("statement {:?}", statement);
             match self.execute(statement) {
                 Some(ReturnValue { value }) => {
                     return Some(ReturnValue::new(value));

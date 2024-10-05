@@ -24,7 +24,6 @@ impl LoxInstance {
 
     pub fn get(&self, name: &Token) -> Option<Value> {
         if let Some(value) = self.fields.get(&name.lexeme) {
-            println!("Help name {:?}", name.lexeme);
             return Some(value.clone());
         }
 
@@ -39,9 +38,7 @@ impl LoxInstance {
     }
 
     pub fn set(&mut self, name: Token, value: Option<Value>) {
-        println!("inserted {:?} with value {:?}", name.lexeme, value);
         self.fields.insert(name.lexeme, value.expect("REASON"));
-        println!("hey buddy {:?}", self.fields);
     }
 }
 

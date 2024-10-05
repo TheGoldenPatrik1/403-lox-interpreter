@@ -32,8 +32,6 @@ impl LoxFunction {
     }
 
     pub fn bind(&self, instance: LoxInstance) -> Option<Value> {
-        // println!("bind environment {:?}", self.environment);
-        println!("bind closure {:?}", self.closure);
         let mut environment = Environment::new(Some(self.closure.clone()));
         environment.define(
             "this".to_string(),
