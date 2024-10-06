@@ -429,6 +429,8 @@ impl StmtVisitor for Interpreter {
         let mut return_value = None;
         if let Some(expr) = value {
             return_value = self.evaluate(&expr);
+        } else {
+            return_value = Some(Value::Nil());
         }
         Some(ReturnValue::new(return_value?))
     }
