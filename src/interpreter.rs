@@ -380,6 +380,7 @@ impl StmtVisitor for Interpreter {
                 methods: methods.clone(),
             },
             Rc::new(RefCell::new(self.environment.borrow_mut().clone())),
+            name.lexeme.clone(),
         )));
         self.environment.borrow_mut().assign(name, klass);
         None
@@ -504,14 +505,14 @@ impl Interpreter {
         environment: Rc<RefCell<Environment>>,
     ) -> Option<ReturnValue> {
         // Store the current environment
-        let _previous = std::mem::replace(&mut self.environment, environment.clone());
+        let previous = std::mem::replace(&mut self.environment, environment.clone());
         // Execute statements in the new environment
         for statement in statements {
             let result = self.execute(Some(statement.clone()));
             match result {
                 Some(ReturnValue { ref value }) => {
                     //std::mem::replace(&mut self.environment, previous.clone());
-                    // self.environment = previous;
+                    self.environment = previous;
                     return Some(ReturnValue::new(value.clone()));
                 }
                 _ => (),
@@ -520,7 +521,7 @@ impl Interpreter {
 
         // Restore the previous environment
         // std::mem::replace(&mut self.environment, previous.clone());
-        // self.environment = previous;
+        self.environment = previous;
         None
     }
 
