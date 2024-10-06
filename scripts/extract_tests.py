@@ -45,7 +45,8 @@ def parse_file(input_file):
                 expect_value = comment.split("expect:")[1].strip()  # Extract the value after "expect:"
                 is_number = re.match(r'^-?\d+(?:\.\d+)?$', expect_value) is not None  # Check if the value is a number
                 is_literal = expect_value in ['true', 'false', 'nil', 'Foo', 'Foo instance']  # Check if the value is a literal
-                if not is_number and not is_literal:
+                is_function = expect_value.startswith("<fn ") or expect_value.startswith("<native ")  # Check if the value is a function
+                if not is_number and not is_literal and not is_function:
                     expect_value = f'"{expect_value}"'
                 expect_comments.append(expect_value)
             elif "error" in comment.lower():

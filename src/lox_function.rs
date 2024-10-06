@@ -132,7 +132,7 @@ impl Callable for LoxFunction {
                             };
                             return Some(self.closure.borrow().get_at(0, &this_token));
                         }
-                        None
+                        Some(Value::Nil())
                     }
                 }
             }
@@ -157,17 +157,10 @@ impl Callable for LoxFunction {
         match &self.declaration {
             Stmt::Function {
                 name,
-                params,
+                params: _,
                 body: _,
             } => {
-                let mut param_string = String::new();
-                for param in params {
-                    param_string.push_str(&param.lexeme);
-                    if param != params.last().unwrap() {
-                        param_string.push_str(", ");
-                    }
-                }
-                format!("fn {}({})", name.lexeme, param_string)
+                format!("<fn {}>", name.lexeme)
             }
             _ => panic!("Expected Stmt::Function, got {:?}", self.declaration),
         }

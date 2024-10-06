@@ -235,6 +235,86 @@ mod tests {
     }
 
     #[test]
+    fn if_var_in_then() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("if", "var_in_then")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn if_dangling_else() {
+        match run_test("if", "dangling_else") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn if_truth() {
+        match run_test("if", "truth") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn if_fun_in_else() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("if", "fun_in_else")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn if_class_in_else() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("if", "class_in_else")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn if_else() {
+        match run_test("if", "else") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn if_fun_in_then() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("if", "fun_in_then")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn if_class_in_then() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("if", "class_in_then")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn if_var_in_else() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("if", "var_in_else")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn if_if() {
+        match run_test("if", "if") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
     fn assignment_grouping() {
         let result = std::panic::catch_unwind(|| {
             run_test("assignment", "grouping")
@@ -307,6 +387,110 @@ mod tests {
     }
 
     #[test]
+    fn function_empty_body() {
+        match run_test("function", "empty_body") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn function_too_many_arguments() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("function", "too_many_arguments")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn function_missing_comma_in_parameters() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("function", "missing_comma_in_parameters")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn function_nested_call_with_arguments() {
+        match run_test("function", "nested_call_with_arguments") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn function_body_must_be_block() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("function", "body_must_be_block")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn function_missing_arguments() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("function", "missing_arguments")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn function_parameters() {
+        match run_test("function", "parameters") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn function_local_recursion() {
+        match run_test("function", "local_recursion") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn function_recursion() {
+        match run_test("function", "recursion") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn function_print() {
+        match run_test("function", "print") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn function_too_many_parameters() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("function", "too_many_parameters")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn function_mutual_recursion() {
+        match run_test("function", "mutual_recursion") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn function_extra_arguments() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("function", "extra_arguments")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
     fn call_nil() {
         let result = std::panic::catch_unwind(|| {
             run_test("call", "nil")
@@ -360,6 +544,86 @@ mod tests {
             Ok(_) => assert!(true),
             Err(err) => assert!(false, "{}", err),
         }
+    }
+
+    #[test]
+    fn for_return_closure() {
+        match run_test("for", "return_closure") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn for_scope() {
+        match run_test("for", "scope") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn for_var_in_body() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("for", "var_in_body")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn for_syntax() {
+        match run_test("for", "syntax") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn for_return_inside() {
+        match run_test("for", "return_inside") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn for_statement_initializer() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("for", "statement_initializer")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn for_statement_increment() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("for", "statement_increment")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn for_statement_condition() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("for", "statement_condition")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn for_class_in_body() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("for", "class_in_body")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn for_fun_in_body() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("for", "fun_in_body")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
     }
 
     #[test]

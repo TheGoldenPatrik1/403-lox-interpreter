@@ -71,9 +71,13 @@ impl Visitor for Interpreter {
             let v = self.evaluate(&value);
             let distance = self.locals.get(expr);
             if let Some(distance) = distance {
-                self.environment
+                if *distance == 1 {
+                    self.environment.borrow_mut().enclosing.as_ref().expect("REASON").borrow_mut().assign(name.clone(), v.clone()?);
+                } else {
+                    self.environment
                     .borrow_mut()
                     .assign_at(*distance, name.clone(), v.clone()?);
+                }
             } else {
                 self.globals.borrow_mut().assign(name.clone(), v.clone()?);
             }
@@ -346,9 +350,9 @@ impl Visitor for Interpreter {
 
 impl StmtVisitor for Interpreter {
     fn visit_block_stmt(&mut self, stmts: Vec<Stmt>) -> Option<ReturnValue> {
-        let new_environment = Rc::new(RefCell::new(Environment::new(Some(Rc::new(RefCell::new(
-            self.environment.borrow_mut().clone(),
-        ))))));
+        let new_environment = Rc::new(RefCell::new(Environment::new(Some(
+            self.environment.clone(),
+        ))));
         self.execute_block(&stmts, new_environment)
     }
 
@@ -573,6 +577,7 @@ impl Interpreter {
     fn is_truthy(object: Option<&Value>) -> bool {
         match object {
             Some(Value::Boolean(b)) => *b,
+            Some(Value::Nil()) => false,
             Some(_) => true,
             None => false,
         }
