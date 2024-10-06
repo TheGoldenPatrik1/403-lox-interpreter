@@ -1,13 +1,9 @@
-class Foo {
-  init(a, b) {
-    print a;
-    print "init"; // expect: init
-    this.a = a;
-    this.b = b;
-    print this.a;
+class Doughnut {
+  cook() {
+    print "Fry until golden brown.";
   }
 }
 
-var foo = Foo(1, 2);
-print foo.a; // expect: 1
-print foo.b; // expect: 2
+class BostonCream < Doughnut {}
+
+BostonCream().cook();
