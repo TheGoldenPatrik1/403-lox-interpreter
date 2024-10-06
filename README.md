@@ -31,6 +31,6 @@ Tests are sourced from the [test folder](https://github.com/munificent/craftingi
 
 ### Steps to Extract Expected Test Values
 
-1. Execute `python scripts/extract_tests.py`.
+1. Execute `cd scripts && python extract_tests.py`.
 2. Copy-paste the automatically generated test methods from `tests.rs` into the testing section at the bottom of `src/main.rs`.
 3. You are now ready to run `cargo test`.

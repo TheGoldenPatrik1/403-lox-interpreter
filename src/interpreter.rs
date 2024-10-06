@@ -158,7 +158,7 @@ impl Visitor for Interpreter {
                             ),
                         );
                         crate::runtime_error(error);
-                        return None;
+                        panic!("Expected {} arguments but got {}.", callable.arity(), args.len());
                     }
                     let ret = Some(callable.call(self, args)?);
                     return ret;
@@ -167,7 +167,7 @@ impl Visitor for Interpreter {
                     let error =
                         RuntimeError::new(paren.clone(), "Can only call functions and classes");
                     crate::runtime_error(error);
-                    None
+                    panic!("Can only call functions and classes");
                 }
             }
         } else {

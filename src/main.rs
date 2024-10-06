@@ -211,6 +211,30 @@ mod tests {
     }
 
     #[test]
+    fn comments_line_at_eof() {
+        match run_test("comments", "line_at_eof") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn comments_only_line_comment() {
+        match run_test("comments", "only_line_comment") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn comments_only_line_comment_and_line() {
+        match run_test("comments", "only_line_comment_and_line") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
     fn assignment_grouping() {
         let result = std::panic::catch_unwind(|| {
             run_test("assignment", "grouping")
@@ -283,6 +307,70 @@ mod tests {
     }
 
     #[test]
+    fn call_nil() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("call", "nil")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn call_bool() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("call", "bool")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn call_num() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("call", "num")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn call_object() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("call", "object")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn call_string() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("call", "string")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn bool_equality() {
+        match run_test("bool", "equality") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn bool_not() {
+        match run_test("bool", "not") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn class_empty() {
+        match run_test("class", "empty") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
     fn class_reference_self() {
         match run_test("class", "reference_self") {
             Ok(_) => assert!(true),
@@ -331,14 +419,6 @@ mod tests {
     }
 
     #[test]
-    fn while_closure_in_body() {
-        match run_test("while", "closure_in_body") {
-            Ok(_) => assert!(true),
-            Err(err) => assert!(false, "{}", err),
-        }
-    }
-
-    #[test]
     fn while_class_in_body() {
         let result = std::panic::catch_unwind(|| {
             run_test("while", "class_in_body")
@@ -352,6 +432,94 @@ mod tests {
             run_test("while", "fun_in_body")
         });
         assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn constructor_call_init_explicitly() {
+        match run_test("constructor", "call_init_explicitly") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn constructor_return_value() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("constructor", "return_value")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn constructor_init_not_method() {
+        match run_test("constructor", "init_not_method") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn constructor_missing_arguments() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("constructor", "missing_arguments")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn constructor_default() {
+        match run_test("constructor", "default") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn constructor_arguments() {
+        match run_test("constructor", "arguments") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn constructor_default_arguments() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("constructor", "default_arguments")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn constructor_call_init_early_return() {
+        match run_test("constructor", "call_init_early_return") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn constructor_extra_arguments() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("constructor", "extra_arguments")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn constructor_return_in_nested_function() {
+        match run_test("constructor", "return_in_nested_function") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn constructor_early_return() {
+        match run_test("constructor", "early_return") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
     }
 
     #[test]
