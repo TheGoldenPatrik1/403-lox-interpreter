@@ -15,8 +15,6 @@ use crate::write_output::write_output;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::thread;
-use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct Interpreter {
@@ -447,7 +445,11 @@ impl StmtVisitor for Interpreter {
     fn visit_while_stmt(&mut self, condition: Expr, body: Box<Stmt>) -> Option<ReturnValue> {
         let previous_environment = self.environment.clone();
         while Interpreter::is_truthy(self.evaluate(&condition).as_ref()) {
-            self.execute(Some(*body.clone()));
+            let ret = self.execute(Some(*body.clone()));
+            if let Some(ReturnValue { value }) = ret {
+                self.environment = previous_environment;
+                return Some(ReturnValue::new(value));
+            }
         }
         self.environment = previous_environment;
         None
@@ -545,7 +547,7 @@ impl Interpreter {
         None
     }
 
-    fn parse_string(&self, s: &str) -> Option<Value> {
+    fn _parse_string(&self, s: &str) -> Option<Value> {
         if let Ok(num) = s.parse::<f64>() {
             return Some(Value::Number(num));
         }

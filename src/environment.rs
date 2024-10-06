@@ -68,7 +68,8 @@ impl Environment {
     }
 
     pub fn assign_at(&mut self, distance: usize, name: Token, value: Value) {
-        self.ancestor(distance).borrow_mut().assign(name, value);
+        //self.ancestor(distance).borrow_mut().assign(name, value)
+        self.assign(name, value)
     }
 
     pub fn define(&mut self, name: String, value: Option<Value>) {

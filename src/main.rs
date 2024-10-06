@@ -7,7 +7,6 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::path::Path;
 use std::rc::Rc;
 
-mod ast_printer;
 mod callable;
 mod environment;
 mod expr;
@@ -279,6 +278,64 @@ mod tests {
     fn assignment_undefined() {
         let result = std::panic::catch_unwind(|| {
             run_test("assignment", "undefined")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn while_return_closure() {
+        match run_test("while", "return_closure") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn while_var_in_body() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("while", "var_in_body")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    #[ignore]
+    fn while_syntax() {
+        match run_test("while", "syntax") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn while_return_inside() {
+        match run_test("while", "return_inside") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn while_closure_in_body() {
+        match run_test("while", "closure_in_body") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn while_class_in_body() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("while", "class_in_body")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn while_fun_in_body() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("while", "fun_in_body")
         });
         assert!(result.is_err(), "Expected a panic but did not get one");
     }

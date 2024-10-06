@@ -62,8 +62,16 @@ def main(input_dir, output_dir, test_dir):
     if not os.path.exists(test_dir):
         os.makedirs(test_dir)
     
+    # Define the rust test functions
+    test_functions = []
+
     # Loop through all subdirectories in the input directory
     for directory in os.listdir(input_dir):
+        # Check if directory is actually a directory
+        if not os.path.isdir(os.path.join(input_dir, directory)):
+            continue
+
+        # Define the input and output subdirectory paths
         input_directory_path = os.path.join(input_dir, directory)
         output_directory_path = os.path.join(output_dir, directory)
 
@@ -75,9 +83,6 @@ def main(input_dir, output_dir, test_dir):
         test_output_directory_path = os.path.join(test_dir, directory)
         if not os.path.exists(test_output_directory_path):
             os.makedirs(test_output_directory_path)
-        
-        # Define the rust test functions
-        test_functions = []
 
         # Loop through all files in the input subdirectory
         for file_name in os.listdir(input_directory_path):
