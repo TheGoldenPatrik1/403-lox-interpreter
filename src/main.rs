@@ -213,6 +213,30 @@ mod tests {
     }
 
     #[test]
+    fn misc_empty_file() {
+        match run_test("misc", "empty_file") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn misc_unexpected_character() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("misc", "unexpected_character")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn misc_precedence() {
+        match run_test("misc", "precedence") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
     fn comments_line_at_eof() {
         match run_test("comments", "line_at_eof") {
             Ok(_) => assert!(true),
@@ -234,6 +258,174 @@ mod tests {
             Ok(_) => assert!(true),
             Err(err) => assert!(false, "{}", err),
         }
+    }
+
+    #[test]
+    fn variable_in_nested_block() {
+        match run_test("variable", "in_nested_block") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn variable_scope_reuse_in_different_blocks() {
+        match run_test("variable", "scope_reuse_in_different_blocks") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn variable_local_from_method() {
+        match run_test("variable", "local_from_method") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn variable_use_global_in_initializer() {
+        match run_test("variable", "use_global_in_initializer") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn variable_use_this_as_var() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("variable", "use_this_as_var")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn variable_redeclare_global() {
+        match run_test("variable", "redeclare_global") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn variable_use_nil_as_var() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("variable", "use_nil_as_var")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn variable_undefined_global() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("variable", "undefined_global")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn variable_shadow_and_local() {
+        match run_test("variable", "shadow_and_local") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn variable_duplicate_parameter() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("variable", "duplicate_parameter")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn variable_uninitialized() {
+        match run_test("variable", "uninitialized") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn variable_use_false_as_var() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("variable", "use_false_as_var")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn variable_shadow_global() {
+        match run_test("variable", "shadow_global") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn variable_duplicate_local() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("variable", "duplicate_local")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn variable_in_middle_of_block() {
+        match run_test("variable", "in_middle_of_block") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn variable_shadow_local() {
+        match run_test("variable", "shadow_local") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn variable_unreached_undefined() {
+        match run_test("variable", "unreached_undefined") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn variable_collide_with_parameter() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("variable", "collide_with_parameter")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn variable_use_local_in_initializer() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("variable", "use_local_in_initializer")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn variable_redefine_global() {
+        match run_test("variable", "redefine_global") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn variable_undefined_local() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("variable", "undefined_local")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
     }
 
     #[test]
@@ -397,6 +589,62 @@ mod tests {
     }
 
     #[test]
+    fn return_after_if() {
+        match run_test("return", "after_if") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn return_after_else() {
+        match run_test("return", "after_else") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn return_at_top_level() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("return", "at_top_level")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn return_return_nil_if_no_value() {
+        match run_test("return", "return_nil_if_no_value") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn return_in_method() {
+        match run_test("return", "in_method") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn return_in_function() {
+        match run_test("return", "in_function") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn return_after_while() {
+        match run_test("return", "after_while") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
     fn function_empty_body() {
         match run_test("function", "empty_body") {
             Ok(_) => assert!(true),
@@ -496,6 +744,174 @@ mod tests {
     fn function_extra_arguments() {
         let result = std::panic::catch_unwind(|| {
             run_test("function", "extra_arguments")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_set_on_nil() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "set_on_nil")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_get_on_string() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "get_on_string")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_many() {
+        match run_test("field", "many") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn field_set_on_function() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "set_on_function")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_set_on_bool() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "set_on_bool")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_method() {
+        match run_test("field", "method") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn field_call_nonfunction_field() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "call_nonfunction_field")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_get_on_nil() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "get_on_nil")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_set_on_class() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "set_on_class")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_set_on_string() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "set_on_string")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_on_instance() {
+        match run_test("field", "on_instance") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn field_get_on_function() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "get_on_function")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_call_function_field() {
+        match run_test("field", "call_function_field") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn field_set_evaluation_order() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "set_evaluation_order")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_method_binds_this() {
+        match run_test("field", "method_binds_this") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn field_set_on_num() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "set_on_num")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_get_on_class() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "get_on_class")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_get_and_set_method() {
+        match run_test("field", "get_and_set_method") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn field_get_on_bool() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "get_on_bool")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_get_on_num() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "get_on_num")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn field_undefined() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("field", "undefined")
         });
         assert!(result.is_err(), "Expected a panic but did not get one");
     }
@@ -621,6 +1037,62 @@ mod tests {
     }
 
     #[test]
+    fn inheritance_inherit_from_nil() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("inheritance", "inherit_from_nil")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn inheritance_inherit_from_function() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("inheritance", "inherit_from_function")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn inheritance_parenthesized_superclass() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("inheritance", "parenthesized_superclass")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn inheritance_set_fields_from_base_class() {
+        match run_test("inheritance", "set_fields_from_base_class") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn inheritance_inherit_from_number() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("inheritance", "inherit_from_number")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn inheritance_inherit_methods() {
+        match run_test("inheritance", "inherit_methods") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn inheritance_constructor() {
+        match run_test("inheritance", "constructor") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
     fn bool_equality() {
         match run_test("bool", "equality") {
             Ok(_) => assert!(true),
@@ -725,6 +1197,30 @@ mod tests {
     }
 
     #[test]
+    fn class_local_inherit_self() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("class", "local_inherit_self")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn class_local_inherit_other() {
+        match run_test("class", "local_inherit_other") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn class_inherited_method() {
+        match run_test("class", "inherited_method") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
     fn class_reference_self() {
         match run_test("class", "reference_self") {
             Ok(_) => assert!(true),
@@ -733,11 +1229,91 @@ mod tests {
     }
 
     #[test]
+    fn class_inherit_self() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("class", "inherit_self")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
     fn class_local_reference_self() {
         match run_test("class", "local_reference_self") {
             Ok(_) => assert!(true),
             Err(err) => assert!(false, "{}", err),
         }
+    }
+
+    #[test]
+    fn this_this_in_method() {
+        match run_test("this", "this_in_method") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn this_this_at_top_level() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("this", "this_at_top_level")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn this_closure() {
+        match run_test("this", "closure") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn this_this_in_top_level_function() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("this", "this_in_top_level_function")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn this_nested_closure() {
+        match run_test("this", "nested_closure") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn this_nested_class() {
+        match run_test("this", "nested_class") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn string_error_after_multiline() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("string", "error_after_multiline")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn string_multiline() {
+        match run_test("string", "multiline") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn string_unterminated() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("string", "unterminated")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
     }
 
     #[test]
@@ -784,6 +1360,78 @@ mod tests {
     fn while_fun_in_body() {
         let result = std::panic::catch_unwind(|| {
             run_test("while", "fun_in_body")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn method_empty_block() {
+        match run_test("method", "empty_block") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn method_arity() {
+        match run_test("method", "arity") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn method_refer_to_name() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("method", "refer_to_name")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn method_too_many_arguments() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("method", "too_many_arguments")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn method_print_bound_method() {
+        match run_test("method", "print_bound_method") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn method_missing_arguments() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("method", "missing_arguments")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn method_not_found() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("method", "not_found")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn method_too_many_parameters() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("method", "too_many_parameters")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn method_extra_arguments() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("method", "extra_arguments")
         });
         assert!(result.is_err(), "Expected a panic but did not get one");
     }

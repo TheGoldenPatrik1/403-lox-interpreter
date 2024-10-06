@@ -21,7 +21,11 @@ impl Environment {
 
     pub fn get(&self, name: &Token) -> Value {
         if let Some(value) = self.values.get(&name.lexeme) {
-            return value.clone().expect("REASON"); // Return the value if found
+            let v = value.clone();
+            match v {
+                Some(val) => return val,
+                None => return Value::Nil(),
+            }
         }
 
         if let Some(enclosing_env) = self.enclosing.as_ref() {

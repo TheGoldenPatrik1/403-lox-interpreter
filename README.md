@@ -21,7 +21,7 @@ Tests are sourced from the [test folder](https://github.com/munificent/craftingi
 
 1. The `/tests` directory contains `.lox` files which our test harness executes.
 2. For each file, the output of the `print` statements is written to a corresponding `.txt` file in the `/output/actual` directory.
-3. The test harness then compares this output file to a corresponding `.txt` file in the `/output/expected` directory to assert that the two files match exactly.
+3. The test harness then compares this output file to a corresponding `.txt` file in the `/output/expected` directory to assert that the two files match exactly. The `expected` file's contents are directly tied to the `// expect:` statements found in the `.lox` test files sourced from the textbook.
 4. In the event that the `.lox` test file is intended to generate an error, the test harness will expect and gracefully handle an error. If no error is encountered, it will assert that the test failed.
 
 ### Steps to Run Test Harness
@@ -31,6 +31,6 @@ Tests are sourced from the [test folder](https://github.com/munificent/craftingi
 
 ### Steps to Extract Expected Test Values
 
-1. Execute `cd scripts && python extract_tests.py`.
+1. Execute `cd scripts && python extract_tests.py` to generate the `/output/expected` files from the `/test` files.
 2. Copy-paste the automatically generated test methods from `tests.rs` into the testing section at the bottom of `src/main.rs`.
 3. You are now ready to run `cargo test`.

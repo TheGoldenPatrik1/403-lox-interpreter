@@ -1,0 +1,8 @@
+class Bar {}
+
+fun f() {
+  class Foo < Bar {}
+  return Foo;
+}
+
+print f(); // expect: Foo
