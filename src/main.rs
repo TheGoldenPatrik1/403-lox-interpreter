@@ -128,6 +128,7 @@ fn runtime_error(error: runtime_error::RuntimeError) {
     HAD_RUNTIME_ERROR.with(|had_error| {
         had_error.set(true);
     }); // Assuming `had_runtime_error` is a thread-local variable
+    panic!("{}\n[line {}]", error.message, error.token.line);
 }
 
 fn error_token(token: &token::Token, message: &str) {
@@ -143,6 +144,7 @@ fn report(line: i32, location: &str, message: &str) {
     HAD_ERROR.with(|had_error| {
         had_error.set(true);
     });
+    panic!("[line {}] Error {}: {}", line, location, message);
 }
 
 #[cfg(test)]
@@ -229,6 +231,14 @@ mod tests {
     #[test]
     fn comments_only_line_comment_and_line() {
         match run_test("comments", "only_line_comment_and_line") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn nil_literal() {
+        match run_test("nil", "literal") {
             Ok(_) => assert!(true),
             Err(err) => assert!(false, "{}", err),
         }
@@ -491,6 +501,54 @@ mod tests {
     }
 
     #[test]
+    fn print_missing_argument() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("print", "missing_argument")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn number_decimal_point_at_eof() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("number", "decimal_point_at_eof")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn number_nan_equality() {
+        match run_test("number", "nan_equality") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn number_literals() {
+        match run_test("number", "literals") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn number_leading_dot() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("number", "leading_dot")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn number_trailing_dot() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("number", "trailing_dot")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
     fn call_nil() {
         let result = std::panic::catch_unwind(|| {
             run_test("call", "nil")
@@ -528,6 +586,38 @@ mod tests {
             run_test("call", "string")
         });
         assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn logical_operator_and() {
+        match run_test("logical_operator", "and") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn logical_operator_or() {
+        match run_test("logical_operator", "or") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn logical_operator_and_truth() {
+        match run_test("logical_operator", "and_truth") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn logical_operator_or_truth() {
+        match run_test("logical_operator", "or_truth") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
     }
 
     #[test]
@@ -694,6 +784,270 @@ mod tests {
     fn while_fun_in_body() {
         let result = std::panic::catch_unwind(|| {
             run_test("while", "fun_in_body")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_add_num_nil() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "add_num_nil")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_equals_method() {
+        match run_test("operator", "equals_method") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn operator_equals_class() {
+        match run_test("operator", "equals_class") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn operator_subtract_num_nonnum() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "subtract_num_nonnum")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_multiply() {
+        match run_test("operator", "multiply") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn operator_negate() {
+        match run_test("operator", "negate") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn operator_divide_nonnum_num() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "divide_nonnum_num")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_comparison() {
+        match run_test("operator", "comparison") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn operator_greater_num_nonnum() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "greater_num_nonnum")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_less_or_equal_nonnum_num() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "less_or_equal_nonnum_num")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_multiply_nonnum_num() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "multiply_nonnum_num")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_not_equals() {
+        match run_test("operator", "not_equals") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn operator_add_bool_num() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "add_bool_num")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_negate_nonnum() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "negate_nonnum")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_add() {
+        match run_test("operator", "add") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn operator_greater_or_equal_nonnum_num() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "greater_or_equal_nonnum_num")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_equals() {
+        match run_test("operator", "equals") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn operator_less_nonnum_num() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "less_nonnum_num")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_add_bool_string() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "add_bool_string")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_divide() {
+        match run_test("operator", "divide") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn operator_add_string_nil() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "add_string_nil")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_add_bool_nil() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "add_bool_nil")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_divide_num_nonnum() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "divide_num_nonnum")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_multiply_num_nonnum() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "multiply_num_nonnum")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_less_or_equal_num_nonnum() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "less_or_equal_num_nonnum")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_greater_nonnum_num() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "greater_nonnum_num")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_not() {
+        match run_test("operator", "not") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn operator_add_nil_nil() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "add_nil_nil")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_subtract() {
+        match run_test("operator", "subtract") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn operator_subtract_nonnum_num() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "subtract_nonnum_num")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_not_class() {
+        match run_test("operator", "not_class") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn operator_greater_or_equal_num_nonnum() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "greater_or_equal_num_nonnum")
+        });
+        assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn operator_less_num_nonnum() {
+        let result = std::panic::catch_unwind(|| {
+            run_test("operator", "less_num_nonnum")
         });
         assert!(result.is_err(), "Expected a panic but did not get one");
     }
