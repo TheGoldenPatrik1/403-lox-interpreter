@@ -16,6 +16,7 @@ pub struct LoxClass {
     pub declaration: Stmt,
     pub closure: Rc<RefCell<Environment>>,
     pub methods: HashMap<String, LoxFunction>,
+    name: String,
 }
 
 impl LoxClass {
@@ -23,6 +24,7 @@ impl LoxClass {
         methods: HashMap<String, LoxFunction>,
         declaration: Stmt,
         closure: Rc<RefCell<Environment>>,
+        class_name: String,
     ) -> Self {
         match declaration {
             Stmt::Class {
@@ -34,6 +36,7 @@ impl LoxClass {
                 declaration,
                 closure,
                 methods,
+                name: class_name,
             },
             _ => panic!("Expected Stmt::Function, got {:?}", declaration),
         }
@@ -83,7 +86,12 @@ impl Callable for LoxClass {
             declaration: self.declaration.clone(),
             closure: self.closure.clone(),
             methods: self.methods.clone(),
+            name: self.name.clone(),
         })
+    }
+
+    fn to_string(&self) -> String {
+        format!("{}", self.name)
     }
 }
 

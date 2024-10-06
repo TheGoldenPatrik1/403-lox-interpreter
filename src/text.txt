@@ -1,7 +1,6 @@
-class Foo {
-  init() {
-    return;
-  }
+var a = 0;
+print "ok here we go";
+while (a < 3) {
+    print a;
+    a = a + 1;
 }
-
-var foo = Foo();

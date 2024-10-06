@@ -283,6 +283,22 @@ mod tests {
     }
 
     #[test]
+    fn class_reference_self() {
+        match run_test("class", "reference_self") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn class_local_reference_self() {
+        match run_test("class", "local_reference_self") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
     fn while_return_closure() {
         match run_test("while", "return_closure") {
             Ok(_) => assert!(true),
@@ -299,7 +315,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn while_syntax() {
         match run_test("while", "syntax") {
             Ok(_) => assert!(true),
@@ -316,7 +331,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn while_closure_in_body() {
         match run_test("while", "closure_in_body") {
             Ok(_) => assert!(true),
@@ -338,5 +352,21 @@ mod tests {
             run_test("while", "fun_in_body")
         });
         assert!(result.is_err(), "Expected a panic but did not get one");
+    }
+
+    #[test]
+    fn block_empty() {
+        match run_test("block", "empty") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
+    }
+
+    #[test]
+    fn block_scope() {
+        match run_test("block", "scope") {
+            Ok(_) => assert!(true),
+            Err(err) => assert!(false, "{}", err),
+        }
     }
 }
