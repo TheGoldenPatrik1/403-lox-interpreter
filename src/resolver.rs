@@ -15,13 +15,21 @@ use std::collections::HashMap;
 pub enum FunctionType {
     None,
     Function,
+    Initializer,
     Method,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ClassType {
+    None,
+    Class,
 }
 
 pub struct Resolver {
     interpreter: Rc<RefCell<Interpreter>>,
     scopes: Vec<HashMap<String, bool>>,
     current_function: FunctionType,
+    current_class: ClassType,
 }
 
 impl Visitor for Resolver {
@@ -140,6 +148,10 @@ impl Visitor for Resolver {
     }
 
     fn visit_this_expr(&mut self, expr: &Expr) -> Option<Value> {
+        if self.current_class == ClassType::None {
+            panic!("Can't use 'this' outside of a class.");
+        }
+
         match expr {
             Expr::This { keyword } => {
                 self.resolve_local(expr, keyword);
@@ -165,6 +177,8 @@ impl StmtVisitor for Resolver {
         _superclass: Option<Expr>,
         methods: Vec<Stmt>,
     ) -> Option<ReturnValue> {
+        let enclosing_class = self.current_class.clone();
+        self.current_class = ClassType::Class;
         self.declare(name.clone());
         self.define(name.clone());
 
@@ -175,17 +189,23 @@ impl StmtVisitor for Resolver {
 
         for method in &methods {
             match method {
-                Stmt::Function {
-                    name: _,
-                    params,
-                    body,
-                } => {
-                    self.resolve_function(params.to_vec(), body.to_vec(), FunctionType::Method);
+                Stmt::Function { name, params, body } => {
+                    if name.lexeme != "init" {
+                        self.resolve_function(params.to_vec(), body.to_vec(), FunctionType::Method);
+                    } else {
+                        self.resolve_function(
+                            params.to_vec(),
+                            body.to_vec(),
+                            FunctionType::Initializer,
+                        );
+                    }
                 }
                 _ => {}
             }
         }
         self.end_scope();
+
+        self.current_class = enclosing_class;
         None
     }
 
@@ -231,6 +251,9 @@ impl StmtVisitor for Resolver {
         }
 
         if value.is_some() {
+            if self.current_function == FunctionType::Initializer {
+                panic!("Can't return a value from an initializer.");
+            }
             self.resolve_expr(&Box::new(value.unwrap()));
         }
         None
@@ -258,6 +281,7 @@ impl Resolver {
             interpreter,
             scopes: vec![],
             current_function: FunctionType::None,
+            current_class: ClassType::None,
         }
     }
 

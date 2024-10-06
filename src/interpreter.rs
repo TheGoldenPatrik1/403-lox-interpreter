@@ -147,7 +147,7 @@ impl Visitor for Interpreter {
                 args.push(self.evaluate(&arg.clone()));
             }
             match function {
-                Some(Value::Callable(callable)) => {
+                Some(Value::Callable(mut callable)) => {
                     if args.len() != callable.arity() {
                         let error = RuntimeError::new(
                             paren.clone(),
@@ -366,7 +366,11 @@ impl StmtVisitor for Interpreter {
         for method in methods {
             match method {
                 Stmt::Function { name, params, body } => {
-                    let function = LoxFunction::new(method.clone(), self.environment.clone());
+                    let function = LoxFunction::new(
+                        method.clone(),
+                        self.environment.clone(),
+                        name.lexeme == "init",
+                    );
                     meths.insert(name.lexeme.clone(), function);
                 }
                 _ => {}
@@ -398,6 +402,7 @@ impl StmtVisitor for Interpreter {
                 body,
             },
             Rc::new(RefCell::new(self.environment.borrow_mut().clone())),
+            false,
         )));
         self.environment
             .borrow_mut()

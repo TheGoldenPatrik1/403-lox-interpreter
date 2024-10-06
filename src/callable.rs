@@ -3,7 +3,11 @@ use crate::value::Value;
 use std::fmt;
 
 pub trait Callable {
-    fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Option<Value>>) -> Option<Value>;
+    fn call(
+        &mut self,
+        interpreter: &mut Interpreter,
+        arguments: Vec<Option<Value>>,
+    ) -> Option<Value>;
     fn arity(&self) -> usize;
     fn clone_box(&self) -> Box<dyn Callable>;
     fn to_string(&self) -> String {

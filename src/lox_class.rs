@@ -39,7 +39,7 @@ impl LoxClass {
         }
     }
 
-    pub fn find_method(&mut self, name: String) -> Option<LoxFunction> {
+    pub fn find_method(&self, name: String) -> Option<LoxFunction> {
         if self.methods.contains_key(&name) {
             // THIS WORKS
             let val = self.methods.get(&name).cloned();
@@ -51,18 +51,30 @@ impl LoxClass {
 
 impl Callable for LoxClass {
     fn call(
-        &self,
-        _interpreter: &mut crate::interpreter::Interpreter,
-        _arguments: Vec<Option<crate::value::Value>>,
+        &mut self,
+        interpreter: &mut crate::interpreter::Interpreter,
+        arguments: Vec<Option<crate::value::Value>>,
     ) -> Option<Value> {
         let instance = Rc::new(RefCell::new(LoxInstance::new(Rc::new(RefCell::new(
             self.clone(),
         )))));
+        if let Some(initializer) = self.find_method("init".to_string()) {
+            if let Some(Value::Callable(mut callable)) =
+                initializer.bind(instance.borrow_mut().clone())
+            {
+                callable.call(interpreter, arguments);
+            }
+        }
         Some(Value::Instance(instance.clone()))
     }
 
     fn arity(&self) -> usize {
-        0
+        let initializer = self.find_method("init".to_string());
+
+        match initializer {
+            Some(func) => func.arity(),
+            None => 0,
+        }
     }
 
     fn clone_box(&self) -> Box<dyn Callable> {

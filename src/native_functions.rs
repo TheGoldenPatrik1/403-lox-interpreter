@@ -5,7 +5,11 @@ use crate::value::Value;
 pub struct Clock;
 
 impl Callable for Clock {
-    fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Option<Value>>) -> Option<Value> {
+    fn call(
+        &mut self,
+        interpreter: &mut Interpreter,
+        arguments: Vec<Option<Value>>,
+    ) -> Option<Value> {
         use std::time::{SystemTime, UNIX_EPOCH};
         let start = SystemTime::now();
         let since_the_epoch = start
