@@ -49,6 +49,16 @@ impl Parser {
 
     fn class_declaration(&mut self) -> Stmt {
         let name = self.consume(TokenType::Identifier, "Expect class name.");
+
+        let mut superclass: Option<Expr> = None;
+
+        if self.match_tokens(vec![TokenType::Less]) {
+            self.consume(TokenType::Identifier, "Expect superclass name.");
+            superclass = Some(Expr::Variable {
+                name: self.previous().clone(),
+            });
+        }
+
         self.consume(TokenType::LeftBrace, "Expect '{' before class body.");
 
         let mut methods = Vec::new();
@@ -60,7 +70,7 @@ impl Parser {
 
         Stmt::Class {
             name,
-            superclass: None,
+            superclass,
             methods,
         }
     }

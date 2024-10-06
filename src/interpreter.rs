@@ -1,3 +1,4 @@
+use crate::callable::Callable;
 use crate::environment::Environment;
 use crate::expr::Expr;
 use crate::lox_class::LoxClass;
@@ -362,6 +363,27 @@ impl StmtVisitor for Interpreter {
         superclass: Option<Expr>,
         ref methods: Vec<Stmt>,
     ) -> Option<ReturnValue> {
+        let mut supclass = None;
+        let mut downcast_superclass = None;
+        if let Some(ref superclass_expr) = superclass {
+            // Evaluate the superclass expression
+            let evaluated_superclass = self.evaluate(superclass_expr);
+            supclass = evaluated_superclass.clone();
+            // Check if it's a LoxClass
+            if let Some(Value::Callable(class)) = evaluated_superclass {
+                // Downcast using the as_any method
+                // Successfully downcasted to LoxClass
+                if let Some(lox_class) = class.as_any().downcast_ref::<LoxClass>() {
+                    // Successfully downcasted to LoxClass, now pass it to the function
+                    downcast_superclass = Some(lox_class.clone());
+                } else {
+                    panic!("Superclass must be a class.");
+                }
+            } else {
+                panic!("Superclass must be a class.");
+            }
+        }
+
         self.environment
             .borrow_mut()
             .define(name.lexeme.clone(), None);
@@ -389,6 +411,7 @@ impl StmtVisitor for Interpreter {
             },
             Rc::new(RefCell::new(self.environment.borrow_mut().clone())),
             name.lexeme.clone(),
+            downcast_superclass,
         )));
         self.environment.borrow_mut().assign(name, klass);
         None

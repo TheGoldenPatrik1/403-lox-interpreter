@@ -1,6 +1,7 @@
 use crate::callable::Callable;
 use crate::interpreter::Interpreter;
 use crate::value::Value;
+use std::any::Any;
 
 pub struct Clock;
 
@@ -20,6 +21,10 @@ impl Callable for Clock {
 
     fn arity(&self) -> usize {
         0
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 
     fn clone_box(&self) -> Box<dyn Callable> {

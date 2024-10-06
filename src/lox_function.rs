@@ -7,6 +7,7 @@ use crate::stmt::Stmt;
 use crate::token::Token;
 use crate::token_type::TokenType;
 use crate::value::Value;
+use std::any::Any;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -142,6 +143,10 @@ impl Callable for LoxFunction {
 
     fn arity(&self) -> usize {
         self.arity
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 
     fn clone_box(&self) -> Box<dyn Callable> {
