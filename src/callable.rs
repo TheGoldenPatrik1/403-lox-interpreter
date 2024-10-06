@@ -1,5 +1,6 @@
 use crate::interpreter::Interpreter;
 use crate::value::Value;
+use std::any::Any;
 use std::fmt;
 
 pub trait Callable {
@@ -9,6 +10,7 @@ pub trait Callable {
         arguments: Vec<Option<Value>>,
     ) -> Option<Value>;
     fn arity(&self) -> usize;
+    fn as_any(&self) -> &dyn Any;
     fn clone_box(&self) -> Box<dyn Callable>;
     fn to_string(&self) -> String {
         "Callable".to_string()

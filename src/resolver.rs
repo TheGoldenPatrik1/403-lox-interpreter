@@ -174,13 +174,26 @@ impl StmtVisitor for Resolver {
     fn visit_class_stmt(
         &mut self,
         name: Token,
-        _superclass: Option<Expr>,
+        superclass: Option<Expr>,
         methods: Vec<Stmt>,
     ) -> Option<ReturnValue> {
         let enclosing_class = self.current_class.clone();
         self.current_class = ClassType::Class;
         self.declare(name.clone());
         self.define(name.clone());
+
+        if let Some(ref expr) = superclass {
+            if let Expr::Variable { name: var } = expr {
+                if name.lexeme == var.lexeme {
+                    panic!("A class can't inherit from itself.");
+                }
+            }
+        }
+
+        if let Some(superclass) = superclass {
+            // Assuming stmt.superclass is an Option
+            self.resolve_expr(&Box::new(superclass)); // Assuming self has a resolve method
+        }
 
         self.begin_scope();
         if let Some(current_scope) = self.scopes.last_mut() {

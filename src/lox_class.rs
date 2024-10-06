@@ -3,6 +3,7 @@ use crate::lox_function::LoxFunction;
 use crate::lox_instance::LoxInstance;
 use crate::stmt::Stmt;
 use crate::value::Value;
+use std::any::Any;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
@@ -17,6 +18,7 @@ pub struct LoxClass {
     pub closure: Rc<RefCell<Environment>>,
     pub methods: HashMap<String, LoxFunction>,
     name: String,
+    superclass: Box<Option<LoxClass>>,
 }
 
 impl LoxClass {
@@ -25,6 +27,7 @@ impl LoxClass {
         declaration: Stmt,
         closure: Rc<RefCell<Environment>>,
         class_name: String,
+        supclass: Option<LoxClass>,
     ) -> Self {
         match declaration {
             Stmt::Class {
@@ -37,6 +40,7 @@ impl LoxClass {
                 closure,
                 methods,
                 name: class_name,
+                superclass: Box::new(supclass),
             },
             _ => panic!("Expected Stmt::Function, got {:?}", declaration),
         }
@@ -80,6 +84,10 @@ impl Callable for LoxClass {
         }
     }
 
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn clone_box(&self) -> Box<dyn Callable> {
         Box::new(LoxClass {
             arity: self.arity,
@@ -87,6 +95,7 @@ impl Callable for LoxClass {
             closure: self.closure.clone(),
             methods: self.methods.clone(),
             name: self.name.clone(),
+            superclass: self.superclass.clone(),
         })
     }
 
