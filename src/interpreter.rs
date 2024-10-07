@@ -13,6 +13,7 @@ use crate::token_type::TokenType;
 use crate::value::Value;
 use crate::write_output::write_output;
 
+use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -37,6 +38,7 @@ pub trait Visitor {
     fn visit_logical_expr(&mut self, expr: &Expr) -> Option<Value>;
     fn visit_set_expr(&mut self, expr: &Expr) -> Option<Value>;
     fn visit_this_expr(&mut self, expr: &Expr) -> Option<Value>;
+    fn visit_super_expr(&mut self, expr: &Expr) -> Option<Value>;
 }
 
 pub trait StmtVisitor {
@@ -159,7 +161,11 @@ impl Visitor for Interpreter {
                             ),
                         );
                         crate::runtime_error(error);
-                        panic!("Expected {} arguments but got {}.", callable.arity(), args.len());
+                        panic!(
+                            "Expected {} arguments but got {}.",
+                            callable.arity(),
+                            args.len()
+                        );
                     }
                     let ret = Some(callable.call(self, args)?);
                     return ret;
@@ -337,6 +343,64 @@ impl Visitor for Interpreter {
         None
     }
 
+    fn visit_super_expr(&mut self, expr: &Expr) -> Option<Value> {
+        let distance = match self.locals.get(expr) {
+            Some(&distance) => distance,
+            None => return None, // Return None if no distance found
+        };
+        let mut token = None;
+        let mut super_method = None;
+        if let Expr::Super { keyword, method } = expr {
+            token = Some(keyword);
+            super_method = Some(method);
+        }
+        let mut superclass = match self.environment.borrow_mut().get_at(distance, token?) {
+            Value::Callable(instance) =>
+            /*instance.clone()*/
+            {
+                instance.as_any().downcast_ref::<LoxClass>().cloned()
+            } // Assuming superclass is of type Instance
+            _ => panic!("Expected superclass to be an instance."),
+        };
+        let token = Token {
+            type_: TokenType::This,
+            lexeme: "this".to_string(),
+            literal: None,
+            line: 0,
+        };
+        let object = match self.environment.borrow_mut().get_at(distance, &token) {
+            Value::Instance(instance) => instance.clone(),
+            _ => panic!("Expected superclass to be an instance."),
+        };
+        let mut method_name = None;
+        if let Expr::Super { method, .. } = expr {
+            method_name = Some(method.lexeme.clone());
+        }
+        // let supe: Rc<RefCell<LoxClass>> = superclass.borrow().klass.clone();
+        let mut method = None;
+        if let Some(lox_class) = superclass {
+            // Store the method for later use, instead of returning it immediately
+            let meth = lox_class.find_method(super_method.unwrap().lexeme.clone());
+
+            // You can now store `method` in a variable and use it later in your logic
+            if let Some(func) = meth {
+                // Store the method for later use (e.g., in a class property or another variable)
+                method = Some(func);
+            } else {
+                panic!("Undefined property '{}'.", super_method.unwrap().lexeme);
+            }
+        } else {
+            panic!("Superclass must be a class.");
+        }
+        // let method = class.find_method(method_name?);
+
+        if method.is_none() {
+            panic!("Undefined property in super.");
+        }
+
+        return method?.bind(object.borrow_mut().clone());
+    }
+
     fn visit_this_expr(&mut self, expr: &Expr) -> Option<Value> {
         if let Expr::This { keyword } = expr {
             return self.lookup_variable(keyword, expr);
@@ -384,6 +448,16 @@ impl StmtVisitor for Interpreter {
             .borrow_mut()
             .define(name.lexeme.clone(), None);
 
+        if let Some(ref _superclass) = superclass {
+            // println!("gonna define");
+            self.environment = Rc::new(RefCell::new(Environment::new(Some(Rc::clone(
+                &self.environment,
+            )))));
+            self.environment
+                .borrow_mut()
+                .define("super".to_string(), supclass.clone());
+        }
+
         let mut meths: HashMap<String, LoxFunction> = HashMap::new();
         for method in methods {
             match method {
@@ -409,6 +483,22 @@ impl StmtVisitor for Interpreter {
             name.lexeme.clone(),
             downcast_superclass,
         )));
+
+        // if let Some(ref _superclass) = superclass {
+        //     if let Some(enclosing_env) = {
+        //         // println!("Enclosing hey buddy");
+        //         // Create a temporary variable to hold the borrow
+        //         let current_env = self.environment.borrow_mut();
+        //         current_env.enclosing.clone()
+        //     } {
+        //         // Now that the borrow has ended, we can assign safely
+        //         // println!("I'm here!!");
+        //         // println!("Values: {:?}", enclosing_env.borrow_mut().values);
+        //         self.environment = enclosing_env;
+        //         // println!("Values: {:?}", self.environment.borrow_mut().values);
+        //     }
+        // }
+
         self.environment.borrow_mut().assign(name, klass);
         None
     }

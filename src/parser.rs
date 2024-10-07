@@ -494,6 +494,12 @@ impl Parser {
                 value: self.previous().clone(),
             };
         }
+        if self.match_tokens(vec![TokenType::Super]) {
+            let keyword = self.previous().clone();
+            self.consume(TokenType::Dot, "Expect '.' after 'super'.");
+            let method = self.consume(TokenType::Identifier, "Expect superclass method name.");
+            return Expr::Super { keyword, method };
+        }
         if self.match_tokens(vec![TokenType::This]) {
             return Expr::This {
                 keyword: self.previous().clone(),

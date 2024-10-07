@@ -23,6 +23,7 @@ pub enum FunctionType {
 pub enum ClassType {
     None,
     Class,
+    Subclass,
 }
 
 pub struct Resolver {
@@ -147,6 +148,22 @@ impl Visitor for Resolver {
         None
     }
 
+    fn visit_super_expr(&mut self, expr: &Expr) -> Option<Value> {
+        if self.current_class == ClassType::None {
+            panic!("Can't use 'super' outside of a class.");
+        } else if self.current_class != ClassType::Subclass {
+            panic!("Can't use 'super' in a class with no superclass.");
+        }
+        if let Expr::Super {
+            ref keyword,
+            method: _,
+        } = expr
+        {
+            self.resolve_local(expr, keyword);
+        }
+        None
+    }
+
     fn visit_this_expr(&mut self, expr: &Expr) -> Option<Value> {
         if self.current_class == ClassType::None {
             panic!("Can't use 'this' outside of a class.");
@@ -190,9 +207,19 @@ impl StmtVisitor for Resolver {
             }
         }
 
-        if let Some(superclass) = superclass {
+        if let Some(ref superclass) = superclass {
             // Assuming stmt.superclass is an Option
-            self.resolve_expr(&Box::new(superclass)); // Assuming self has a resolve method
+            self.current_class = ClassType::Subclass;
+            self.resolve_expr(&Box::new(superclass.clone())); // Assuming self has a resolve method
+        }
+
+        if let Some(ref _superclass) = superclass {
+            self.begin_scope();
+
+            // Peek at the top of the stack and insert "super" with true
+            if let Some(scope) = self.scopes.last_mut() {
+                scope.insert("super".to_string(), true);
+            }
         }
 
         self.begin_scope();
@@ -215,6 +242,10 @@ impl StmtVisitor for Resolver {
                 }
                 _ => {}
             }
+        }
+
+        if let Some(_superclass) = superclass {
+            self.end_scope();
         }
         self.end_scope();
 

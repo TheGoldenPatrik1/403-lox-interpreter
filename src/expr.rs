@@ -45,6 +45,10 @@ pub enum Expr {
         object: Box<Expr>,
         name: Token,
     },
+    Super {
+        keyword: Token,
+        method: Token,
+    },
     This {
         keyword: Token,
     },
@@ -80,6 +84,7 @@ impl Expr {
             } => self.parenthesize(&paren.lexeme, vec![]),
             Expr::Get { object, name } => self.parenthesize(&name.lexeme, vec![object]),
             Expr::This { keyword } => keyword.to_string(),
+            Expr::Super { keyword, method: _ } => keyword.to_string(),
         }
     }
 
@@ -115,6 +120,10 @@ impl Expr {
                 value: _,
             } => visitor.visit_set_expr(self),
             Expr::This { keyword: _ } => visitor.visit_this_expr(self),
+            Expr::Super {
+                keyword: _,
+                method: _,
+            } => visitor.visit_super_expr(self),
         }
     }
 

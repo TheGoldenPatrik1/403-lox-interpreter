@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct LoxInstance {
-    klass: Rc<RefCell<LoxClass>>, // Use Rc to allow multiple ownership
+    pub klass: Rc<RefCell<LoxClass>>, // Use Rc to allow multiple ownership
     pub fields: HashMap<String, Value>,
 }
 

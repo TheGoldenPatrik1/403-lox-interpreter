@@ -1,13 +1,14 @@
 use crate::runtime_error::RuntimeError;
 use crate::token::Token;
 use crate::value::Value;
+use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    enclosing: Option<Rc<RefCell<Environment>>>,
+    pub enclosing: Option<Rc<RefCell<Environment>>>,
     pub values: HashMap<String, Option<Value>>,
 }
 
@@ -41,7 +42,7 @@ impl Environment {
     pub fn ancestor(&self, distance: usize) -> Rc<RefCell<Environment>> {
         let mut environment = Rc::new(RefCell::new(self.clone()));
         for _ in 0..distance {
-            let next_environment = environment.borrow().enclosing.clone().unwrap();
+            let next_environment = environment.borrow_mut().enclosing.clone().unwrap();
             environment = next_environment;
         }
         environment
