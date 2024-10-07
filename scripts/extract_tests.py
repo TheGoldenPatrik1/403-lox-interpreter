@@ -68,11 +68,18 @@ def main(input_dir, output_dir, test_dir):
     # Define the rust test functions
     test_functions = []
 
+    # Define the test categories
+    test_categories = {}
+    extracted_comments = 0
+
     # Loop through all subdirectories in the input directory
     for directory in os.listdir(input_dir):
         # Check if directory is actually a directory
         if not os.path.isdir(os.path.join(input_dir, directory)):
             continue
+        
+        # Initialize the test category
+        test_categories[directory] = 0
 
         # Define the input and output subdirectory paths
         input_directory_path = os.path.join(input_dir, directory)
@@ -93,6 +100,7 @@ def main(input_dir, output_dir, test_dir):
             
             # Make sure it's a file
             if os.path.isfile(input_file_path) and file_name.endswith(".lox"):
+                test_categories[directory] += 1
                 with open(input_file_path, 'r') as input_file:
                     expect_comments, has_error = parse_file(input_file)
                 
@@ -109,10 +117,15 @@ def main(input_dir, output_dir, test_dir):
                 # Build the test function string
                 test_function = build_function(directory, file_name, has_error)
                 test_functions.append(test_function)
-                
-                print(f"Extracted {len(expect_comments)} 'expect:' comments from '{input_file_path}' and saved in '{output_file_path}'.")
 
-    print(f"Expect comments extraction completed. Output saved in '{output_dir}'.")
+                # Update statistics and print message
+                extracted_comments += len(expect_comments)
+                # print(f"Extracted {len(expect_comments)} 'expect:' comments from '{input_file_path}' and saved in '{output_file_path}'.")
+
+    # Print results
+    for category, count in sorted(test_categories.items()):
+        print(f"Category '{category}' has {count} test files.")
+    print(f"Extracted {extracted_comments} expect comments. Output saved in '{output_dir}'.")
 
     # Write the test functions to a file
     write_test_functions(test_functions)

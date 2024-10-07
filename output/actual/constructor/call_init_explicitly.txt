@@ -1,4 +1,0 @@
-"Foo.init(one)"
-"Foo.init(two)"
-Foo instance
-"field"
