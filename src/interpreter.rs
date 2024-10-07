@@ -74,9 +74,13 @@ impl Visitor for Interpreter {
             let v = self.evaluate(&value);
             let distance = self.locals.get(expr);
             if let Some(distance) = distance {
-                self.environment
+                if *distance == 1 {
+                    self.environment.borrow_mut().enclosing.as_ref().expect("REASON").borrow_mut().assign(name.clone(), v.clone()?);
+                } else {
+                    self.environment
                     .borrow_mut()
                     .assign_at(*distance, name.clone(), v.clone()?);
+                }
             } else {
                 self.globals.borrow_mut().assign(name.clone(), v.clone()?);
             }
@@ -122,8 +126,12 @@ impl Visitor for Interpreter {
                     Some(Value::Number(-num))
                 }
                 TokenType::Bang => {
+                    match r {
+                        Some(Value::Nil()) => return Some(Value::Boolean(true)),
+                        _ => (),
+                    }
                     let Some(Value::Boolean(bool_val)) = r else {
-                        todo!()
+                        return Some(Value::Boolean(false));
                     };
                     Some(Value::Boolean(!Interpreter::is_truthy(Some(
                         &Value::Boolean(bool_val),
@@ -411,9 +419,9 @@ impl Visitor for Interpreter {
 
 impl StmtVisitor for Interpreter {
     fn visit_block_stmt(&mut self, stmts: Vec<Stmt>) -> Option<ReturnValue> {
-        let new_environment = Rc::new(RefCell::new(Environment::new(Some(Rc::new(RefCell::new(
-            self.environment.borrow_mut().clone(),
-        ))))));
+        let new_environment = Rc::new(RefCell::new(Environment::new(Some(
+            self.environment.clone(),
+        ))));
         self.execute_block(&stmts, new_environment)
     }
 
@@ -686,6 +694,7 @@ impl Interpreter {
     fn is_truthy(object: Option<&Value>) -> bool {
         match object {
             Some(Value::Boolean(b)) => *b,
+            Some(Value::Nil()) => false,
             Some(_) => true,
             None => false,
         }
@@ -693,9 +702,24 @@ impl Interpreter {
 
     fn is_equal(a: Option<Value>, b: Option<Value>) -> bool {
         match (a, b) {
-            (None, None) => true,           // Both are None (null in Java)
-            (None, _) | (_, None) => false, // One is None, the other is not
-            (Some(ref a_val), Some(ref b_val)) => a_val == b_val, // Both are Some and compare values
+            (None, None) => true,
+            (None, _) | (_, None) => false,
+            (Some(ref a_val), Some(ref b_val)) => {
+                match (a_val, b_val) {
+                    (Value::Callable(a_call), Value::Callable(b_call)) => {
+                        match (a_call.as_any().downcast_ref::<LoxFunction>(), b_call.as_any().downcast_ref::<LoxFunction>()) {
+                            (Some(a_func), Some(b_func)) => a_func.to_string() == b_func.to_string(),
+                            _ => {
+                                match (a_call.as_any().downcast_ref::<LoxClass>(), b_call.as_any().downcast_ref::<LoxClass>()) {
+                                    (Some(a_class), Some(b_class)) => ToString::to_string(&a_class) == ToString::to_string(&b_class),
+                                    _ => false
+                                }
+                            },
+                        }
+                    },
+                    _ => a_val == b_val,
+                }
+            },
         }
     }
 

@@ -239,6 +239,7 @@ impl Parser {
             loop {
                 if params.len() >= 255 {
                     crate::error_token(self.peek(), "Cannot have more than 255 parameters.");
+                    panic!("Cannot have more than 255 parameters.");
                 }
                 params.push(self.consume(TokenType::Identifier, "Expect parameter name."));
                 if !self.match_tokens(vec![TokenType::Comma]) {
@@ -458,6 +459,7 @@ impl Parser {
             loop {
                 if arguments.len() >= 255 {
                     crate::error_token(self.peek(), "Cannot have more than 255 arguments.");
+                    panic!("Cannot have more than 255 arguments.");
                 }
                 arguments.push(self.expression());
                 if !self.match_tokens(vec![TokenType::Comma]) {

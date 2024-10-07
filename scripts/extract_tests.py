@@ -44,8 +44,11 @@ def parse_file(input_file):
             if "expect:" in comment:
                 expect_value = comment.split("expect:")[1].strip()  # Extract the value after "expect:"
                 is_number = re.match(r'^-?\d+(?:\.\d+)?$', expect_value) is not None  # Check if the value is a number
-                is_literal = expect_value in ['true', 'false', 'nil', 'Foo', 'Foo instance']  # Check if the value is a literal
-                if not is_number and not is_literal:
+                is_literal = expect_value in [
+                    'true', 'false', 'nil', 'Foo', 'Foo instance', 'Outer instance', 'Inner instance'
+                ]  # Check if the value is a literal
+                is_function = expect_value.startswith("<fn ") or expect_value.startswith("<native ")  # Check if the value is a function
+                if not is_number and not is_literal and not is_function:
                     expect_value = f'"{expect_value}"'
                 expect_comments.append(expect_value)
             elif "error" in comment.lower():
@@ -89,7 +92,7 @@ def main(input_dir, output_dir, test_dir):
             input_file_path = os.path.join(input_directory_path, file_name)
             
             # Make sure it's a file
-            if os.path.isfile(input_file_path):
+            if os.path.isfile(input_file_path) and file_name.endswith(".lox"):
                 with open(input_file_path, 'r') as input_file:
                     expect_comments, has_error = parse_file(input_file)
                 
@@ -100,6 +103,7 @@ def main(input_dir, output_dir, test_dir):
                 # Write the extracted "expect:" comments to the new file
                 with open(output_file_path, 'w') as output_file:
                     for comment in expect_comments:
+                        comment = comment.replace("\\n", "\n")
                         output_file.write(comment + '\n')
                 
                 # Build the test function string
